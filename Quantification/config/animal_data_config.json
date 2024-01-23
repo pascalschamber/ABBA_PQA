@@ -1,0 +1,51 @@
+{
+    "image_data_base_dir" : "D:/ReijmersLab/TEL/slides", 
+    "image_dir_names" : ["fullsize", "resized"],
+    "animal_id_prefix" : "TEL",
+
+    "qupath_subdirs" : { 
+        "atlas_mask_dir":"atlas_masks",
+        "geojson_regions_dir":"qupath_export_geojson",
+        "qupath_project_filepath":"project.qpproj",
+        "abba_states_dir":"abba_states",
+        "quant_dir":"quant",
+        "counts_dir":"counts",
+        "pxToAtlasCoords":"qupath_export_pxToAtlasCoords"
+    },
+
+
+    "align_files_dict" : {
+        "fullsize":[".tif"], 
+        "resized":[".png"], 
+        "geojson_regions_dir":[".geojson"], 
+        "atlas_mask_dir":["atlas_mask.tif", "leftSide.tif"],
+        "quant_dir":["nuclei.tif"],
+        "counts_dir":["region_df.csv", "rpdf.csv"],
+        "pxToAtlasCoords":["pxToAtlasCoords.tsv"]
+    },
+
+ 
+    "cohorts" : [
+        {
+            "cohort_name": "cohort2",
+            "id_range":[15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
+            "image_dir":"processed_czi_images",
+            "abba_projects_by_animal_dir": "H:/fullsize/fullsize",
+            "file_derivatives_dirname": "qupath"
+        },
+        {
+            "cohort_name": "cohort3",
+            "id_range":[30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49],
+            "image_dir":"processed_czi_images_cohort-3",
+            "abba_projects_by_animal_dir": "D:/ReijmersLab/TEL/slides/ABBA_projects/byAnimal",
+            "file_derivatives_dirname": null
+        },
+        {
+            "cohort_name": "cohort4",
+            "id_range":[50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 64, 65, 66, 67, 68, 69],
+            "image_dir":"processed_czi_images_cohort-4",
+            "abba_projects_by_animal_dir": "D:/ReijmersLab/TEL/slides/ABBA_projects/byAnimal",
+            "file_derivatives_dirname": null
+        }
+    ]
+}
