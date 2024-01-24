@@ -24,20 +24,7 @@ import utilities.utils_atlas_region_helper_functions as arhfs
 import utilities.utils_general as ug
 import core_regionPoly as rp
 
-base_dir = r"C:\Users\pasca\Box\Reijmers Lab\Pascal\Code\ABBA_PQA"
-print('ABBA_PQA')
-for bd in os.listdir(base_dir):
 
-    bdp = os.path.join(base_dir,bd)
-    print(f"  {bd}")
-    if os.path.isdir(bdp):
-        for subd in os.listdir(bdp):
-            print(f"    -{subd}")
-
-            subdp = os.path.join(bdp, subd)
-            if os.path.isdir(subdp):
-                for subsubd in os.listdir(subdp):
-                    print(f"      -{subsubd}")
 
 '''
 ##################################################################################################

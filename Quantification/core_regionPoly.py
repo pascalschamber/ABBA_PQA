@@ -32,9 +32,8 @@ import utilities.utils_atlas_region_helper_functions as arhfs
 import utilities.utils_plotting as up
 
 
-# numba functions
+# point in polygon functions
 ##################################################################################################################
-
 @nb.jit(nopython=True)
 def nb_process_polygons(singles, multis, centroids):
     """
@@ -112,21 +111,22 @@ def get_empty_multi_nb():
     return List.empty_list(types.ListType(inner_array_type))
     
 
-# new main funcs
-##############################################
+
+# handling geojson objects
+##################################################################################################################
 def load_geojson_objects(geojson_path):
+    # read in qupath .geojson file and parse detections to get only valid annotations
     with open(geojson_path) as f:
         allobjects = geojson.load(f)
     allfeatures = allobjects['features']
     
-    # get all objs except the root, which doesn't have an atlas id
-    all_objs = [obj for obj in allfeatures if 'measurements' in obj['properties'].keys()] # keeping for backwards compat.
-    all_objs = [obj for obj in all_objs if 'ID' in obj['properties']['measurements']] # NEW 2023_0808 replaced above line
-    # all_obj_region_ids = [obj['properties']['measurements']['ID'] for obj in all_objs]
-    # all_obj_region_sides = [obj['properties']['classification']['names'][0] for obj in all_objs]
+    # get all detections that have an 'ID' (regions) except the root, which doesn't have an atlas id
+    all_objs = [obj for obj in allfeatures if ('measurements' in obj['properties'].keys()) and ('ID' in obj['properties']['measurements'])]
+    # all_objs = [obj for obj in all_objs if 'ID' in obj['properties']['measurements']] 
+   
     return all_objs
 
-# temp helpers
+
 def extract_polyregions(geojson_objs, ont):
     # build region polygon objects, parsing single and multipolygons from qupaths geojson file
     all_polys = []
@@ -294,15 +294,7 @@ class regionPoly:
             self.print_str += f"{self.obj_i} ({self.geometry_type}) --> n: {len(coord_arrs)}\n"
             for astr in self.ragged_shapes:
                 self.print_str += f"\tragged arr: {astr}\n"
-            # self.print_str += f"\tnon-packed shapes ({len(valid)}/{num_poly_coords}): {[el.shape for el in valid]}\n"
-            # self.print_str += f"\tpacked shapes ({len(self.ragged_arrs)}/{num_poly_coords}): {[el.shape for el in self.ragged_arrs]}\n"
-            # unpacked_arrs = [np.array(ell) for el in self.ragged_arrs for ell in el]
-            # unpacked_shapes = [el.shape for el in unpacked_arrs]
-            # self.print_str += f"\t\tragged unpacked shapes: {unpacked_shapes}\n\n"
             
-            # checks 
-            # assert len(main_poly) == 1, f"{len(main_poly)} multiple main polys are not supported"
-            # assert all([len(el)==2 for el in main_poly+exteriors+interiors if len(el)!=0]) # check_all_2dim
         except Exception as e:
             error = e
 
@@ -441,8 +433,8 @@ def get_polygons_extent(poly_list):
             minimum_y = min_y
     return minimum_x, minimum_y, maximum_x, maximum_y
 
-def plot_polygons(apoly, plot_points=None, fig_title=None, show_legend=True, region_outlines=None, region_label=False, SAVE_PATH=None, limit_plot=True):
-    fig,ax = plt.subplots(1, figsize=(20,20))       
+def plot_polygons(apoly, plot_points=None, fig_title=None, show_legend=True, region_outlines=None, region_label=False, SAVE_PATH=None, limit_plot=True, fig_size=(20,20), fc_alpha=0.2, pad=200):
+    fig,ax = plt.subplots(1, figsize=fig_size)       
     # support for passing a single array of coordinates too
     if isinstance(apoly, regionPoly):
         minimum_x, minimum_y, maximum_x, maximum_y = get_polygons_extent([pd['arr'] for pd in apoly.poly_arrays.values()])
@@ -452,15 +444,16 @@ def plot_polygons(apoly, plot_points=None, fig_title=None, show_legend=True, reg
     else: 
         raise ValueError()
 
-    pad = 200
+    # limit plot area
     x_min, x_max = minimum_x-pad, maximum_x+pad
     y_min, y_max = minimum_y-pad, maximum_y+pad
     if limit_plot:
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
 
-    if region_outlines is not None: # put these down first so current polylist is clear
-        # plot outlines of all regions provided, expects a list of polyRegions
+
+    # plot outlines of all regions provided, expects a list of polyRegions
+    if region_outlines is not None: # put these down first so current polylist is clear        
         for ap in region_outlines:
             for pi,pd in ap.poly_arrays.items():
                 centroid = pd['arr'].mean(axis=0)
@@ -474,12 +467,9 @@ def plot_polygons(apoly, plot_points=None, fig_title=None, show_legend=True, reg
                 ax.text(centroid[0], centroid[1], c_lbl, ha='right', va='top', bbox=bbox_props, c='w', fontsize='xx-small')
 
     # Add the patch to the Axes
-    # palette = {'exteriors':'red', 'interiors': 'green', 'exteriors_secondary': 'white'}
-    # palette_fc = {'exteriors':'none', 'interiors': 'green', 'exteriors_secondary': 'white'}
-    fc_alpha = 0.2
-    blue_rgba = (0.0, 0.0, 1.0, fc_alpha)   # Blue with 20% opacity
-    green_rgba = (0.0, 1.0, 0.0, fc_alpha)  # Green with 20% opacity
-    red_rgba = (1.0, 0.0, 0.0, fc_alpha)    # Red with 20% opacity
+    blue_rgba = (0.0, 0.0, 1.0, fc_alpha)    # with opacity
+    green_rgba = (0.0, 1.0, 0.0, fc_alpha)  
+    red_rgba = (1.0, 0.0, 0.0, fc_alpha)    
     yellow_rgba = (1.0, 1.0, 0.0, 0.5)
     palette2 = {'exteriors':yellow_rgba, 'main': yellow_rgba, 'interiors':(1.0, 0.0, 0.0, 0.5)}
     palette2_fc = {'exteriors':blue_rgba, 'main': green_rgba, 'interiors':red_rgba}
@@ -510,7 +500,7 @@ def plot_polygons(apoly, plot_points=None, fig_title=None, show_legend=True, reg
         fig.savefig(os.path.join(SAVE_PATH, outname), dpi=300, bbox_inches='tight')
         plt.close()
 
-# plot_polygons(apoly, fig_title=fig_title, region_outlines=apolylist)
+
         
 
 # debugging
@@ -563,6 +553,7 @@ def plot_unassigned_coordinates(rpdf, centroids, regionPoly_list, get_polyi=0):
     plot_polygons(regionPoly_list[get_polyi], plot_points=unassigned_centroids, limit_plot=False) 
 
 def print_poly_list(poly_list):
+    # print info for a list of regionPolys
     for pi, apoly in enumerate(poly_list):
         print(apoly.region_name)
         print(pi, f'n: {len(apoly.poly_arrays)}')

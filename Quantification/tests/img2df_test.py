@@ -38,15 +38,32 @@ from utilities.utils_data_management import AnimalsContainer
 import utilities.utils_atlas_region_helper_functions as arhfs
 import utilities.utils_plotting as up
 
-import img2df_2023_0602 as img2df
+import img2df
 import core_regionPoly as rp
 from core_regionPoly import plot_compare_region_counts, plot_coordinates_inside_polygon
-import compile_data_2023_0602 as compile
+import compile_data as compile
 
+# print project directory
+# base_dir = r"C:\Users\pasca\Box\Reijmers Lab\Pascal\Code\ABBA_PQA"
+# print('ABBA_PQA')
+# for bd in os.listdir(base_dir):
+
+#     bdp = os.path.join(base_dir,bd)
+#     print(f"  {bd}")
+#     if os.path.isdir(bdp):
+#         for subd in os.listdir(bdp):
+#             print(f"    -{subd}")
+
+#             subdp = os.path.join(bdp, subd)
+#             if os.path.isdir(subdp):
+#                 for subsubd in os.listdir(subdp):
+#                     print(f"      -{subsubd}")
 
 ###################################################
 
 DEBUG = bool(1)
+COMPARE_COUNTS_PATH = r"D:\ReijmersLab\TEL\slides\quant_data\counts\2023_0827_151059_quant_data.csv"
+
 # get animals data (rpdf, regions)
 ont = arhfs.Ontology()
 names_dict = dict(zip([d['name'] for d in ont.ont_ids.values()], ont.ont_ids.keys()))
@@ -77,10 +94,6 @@ for an in animals[-1:]:
         #         raise ValueError(f"{polyType} is not handled")
 
 
-
-
-
-        
         datum_t0 = dt()
         prt_str = '' # add to this string for display of debugging
         geojson_path = datum.geojson_regions_dir_paths
@@ -100,8 +113,10 @@ for an in animals[-1:]:
         # generate counts to compare to
         rpdf_input = pd.read_csv(datum.rpdf_paths)
         centroids = np.array([ast.literal_eval(c)[::-1] for c in rpdf_input['centroid'].to_list()]) # get centroids
-        region_df_GT = pd.read_csv(datum.region_df_paths)
-        region_count_df_GT = compile.get_nuclei_per_region_df(rpdf_input, region_df_GT, an.base_dir)
+        region_df_GT = pd.read_csv(datum.region_df_paths).assign(poly_index = lambda df:df['Unnamed: 0'])
+        # would need to compare to unthresholded counts but compile.get_nuclei_per_region_df is now incompatible with old
+        region_count_df_GT = pd.read_csv(COMPARE_COUNTS_PATH)
+        region_count_df_GT = region_count_df_GT[region_count_df_GT['img_name'] == os.path.basename(datum.fullsize_paths)[:-8]]
         load_t1 = dt()
         
         # localize nuclei to lowest structural level 

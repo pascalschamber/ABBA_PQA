@@ -151,14 +151,14 @@ class Dispatcher:
     def normalize(self, img):
         intensity_info = {}
         normed_img = np.zeros_like(img, dtype=np.float32)
-        for i in range(3):
 
+        for i in range(normed_img.shape[-1]): # iter channels
             # generate normalizer
             nmin,nmax = self.norm[i]['nmin'], self.norm[i]['nmax']
             miFull, maFull = np.percentile(img[...,i], [nmin,nmax])
             normalizerFull = uip.MyNormalizer(miFull, maFull)
 
-            # normalize image before hand
+            # normalize image before feeding into predict
             normed_img[...,i] = normalizerFull.before(img[...,i], 'YX')
 
             # store intensity info
@@ -236,7 +236,7 @@ def get_dispatchers(
                 continue
 
             an_id = an.animal_id_to_int(an.animal_id)
-            d_read_img_kwargs = {k:v if not callable(v) else v(an_id) for k,v in read_img_kwargs.items()}
+            d_read_img_kwargs = {k:v if not callable(v) else v(an_id) for k,v in read_img_kwargs.items()} if read_img_kwargs else {}
 
             dispatchers.append(Dispatcher(
                 disp_i = disp_i,
@@ -256,39 +256,77 @@ def get_dispatchers(
 
 
 ##########################################################################################################################
-# # conda activate csbdeep
-# # python "C:\Users\pasca\Box\Reijmers Lab\Pascal\Code\Image_Processing\quantification\stardist_predict_2023_0513.py"
+# steps for running in terminal
+# conda activate csbdeep
+# cd "C:\Users\pasca\Box\Reijmers Lab\Pascal\Code\Image_Processing\quantification"
+# python "C:\Users\pasca\Box\Reijmers Lab\Pascal\Code\Image_Processing\quantification\stardist_predict_2023_0513.py"
 
 
 
 if __name__ == '__main__':
+    """ 
+    ```````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+    DESCRIPTION:
+        pipeline for generating nuclei predictions with stardist
+    
+    PARAMS:
+        NORM_DICT (dict): A nested dictionary specifying normalization parameters for different cohorts. 
+                        Each cohort has a sub-dictionary keyed by an integer, mapping to another dictionary 
+                        with 'nmin' and 'nmax' values.
+                        Example: {'cohort2': {0: {'nmin': 20, 'nmax': 99.8}, ...}, ...}
+    
+        CLEAN (bool): If True, deletes previous predictions before running the pipeline.
+        
+        MULTIPROCESS (bool): If True, enables multiprocessing. Must run from the terminal when this is enabled.
+        
+        SKIP_ALREADY_COMPLETED (bool): If True, skips data that already have a nuclear image.
+        
+        PRED_N_TILES (tuple): A tuple specifying the number of tiles to break an image into during prediction. 
+                            More tiles result in less memory usage. Format is (num_tiles_x, num_tiles_y) since 
+                            separate prediction is made for each channel allowing for different normalization parameters.
+        
+        READ_IMG_KWARGS (dict): A dictionary of keyword arguments passed to uip.read_img 
+                                Can pass a lambda function for modifying args depending on animal_id (as int)
+                                Example: {'flip_gr_ch':lambda an_id: True if (an_id > 29 and an_id < 50) else False} 
+        
+        IMG_INTENSITY_OUTPATH (str): The file path where image intensity data will be saved. 
 
-    tRun = time.time()
-    model = StarDist2D.from_pretrained('2D_versatile_fluo')
-    ac = AnimalsContainer()
-    ac.init_animals(failOnError=False)
+        disp_start_i (int or None): The starting index for for dipatchers to process. If None, starts from the beginning.
 
+        disp_end_i (int or None): The ending index for dipatchers to process (exclusive).            
 
+        animals_to_get (list): A list of animals obtained from `ac.get_animals` method, e.g. filtered by the specified cohorts.
+
+    """
     # PARAMS
-    #######################################################
+    ##############################################################################################################
     NORM_DICT = {
         'cohort2':{0:{'nmin':20, 'nmax':99.8}, 1:{'nmin':20, 'nmax':99.8}, 2:{'nmin':20, 'nmax':99.8}},
         'cohort3':{0:{'nmin':30, 'nmax':99.8}, 1:{'nmin':30, 'nmax':99.8}, 2:{'nmin':20, 'nmax':99.8}},
         'cohort4':{0:{'nmin':30, 'nmax':99.8}, 1:{'nmin':30, 'nmax':99.8}, 2:{'nmin':20, 'nmax':99.8}},
     }
     CLEAN = bool(0)
-    MULTIPROCESS = bool(0)
-    SKIP_ALREADY_COMPLETED = bool(0)
-    PRED_N_TILES = (2,2)
-    READ_IMG_KWARGS = {'flip_gr_ch':lambda an_id: True if (an_id > 29 and an_id < 50) else False}
+    MULTIPROCESS = bool(0) 
+    SKIP_ALREADY_COMPLETED = bool(0) 
+    PRED_N_TILES = (2,2) 
+    READ_IMG_KWARGS = {'flip_gr_ch':lambda an_id: True if (an_id > 29 and an_id < 50) else False} 
     IMG_INTENSITY_OUTPATH = os.path.join(r'D:\ReijmersLab\TEL\slides\quant_data\fs_img_intensities', 
                                    '2024_0123_fs-image-intensities_all-cohorts.json')
     disp_start_i = None
     disp_end_i = 1
-    animals = ac.get_animals('cohort2') + ac.get_animals('cohort3') + ac.get_animals('cohort4')
+    animals_to_get = ['cohort2','cohort3','cohort4']
 
-    #######################################################
 
+
+    # initializations
+    ##############################################################################################################
+    tRun = time.time()
+    model = StarDist2D.from_pretrained('2D_versatile_fluo') # load model
+    ac = AnimalsContainer()
+    ac.init_animals(failOnError=False)
+    animals = ac.get_animals(animals_to_get)
+
+    # init dispatchers
     disps = get_dispatchers(
         animals, 
         norm_dict=NORM_DICT, 
@@ -298,10 +336,12 @@ if __name__ == '__main__':
         CLEAN=CLEAN, 
         SKIP_ALREADY_COMPLETED=SKIP_ALREADY_COMPLETED,
     ) [disp_start_i:disp_end_i]
+
     print(f"processing num disps: {len(disps)}", flush=True)
 
 
-    
+    # run pipeline
+    #######################################################
     if MULTIPROCESS:    
         PROC = Processor(model, max_prefetch=1, max_workers=1, intensity_info_path=IMG_INTENSITY_OUTPATH, pred_n_tiles=PRED_N_TILES)
         PROC.process(disps)
@@ -314,7 +354,7 @@ if __name__ == '__main__':
 
             # predict
             label_image = np.stack(
-                [model.predict_instances(normed_img[...,i], axes='YX', normalizer=None, n_tiles=disp.pred_n_tiles)[0] for i in range(3)],
+                [model.predict_instances(normed_img[...,i], axes='YX', normalizer=None, n_tiles=disp.pred_n_tiles)[0] for i in range(normed_img.shape[-1])],
                 -1)
 
             # save pred image and intensity info
