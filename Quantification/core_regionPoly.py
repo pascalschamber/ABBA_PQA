@@ -120,10 +120,9 @@ def load_geojson_objects(geojson_path):
         allobjects = geojson.load(f)
     allfeatures = allobjects['features']
     
-    # get all detections that have an 'ID' (regions) except the root, which doesn't have an atlas id
+    # get all detections that have an 'ID' (regions), except the root which doesn't have an atlas id
     all_objs = [obj for obj in allfeatures if ('measurements' in obj['properties'].keys()) and ('ID' in obj['properties']['measurements'])]
-    # all_objs = [obj for obj in all_objs if 'ID' in obj['properties']['measurements']] 
-   
+    
     return all_objs
 
 

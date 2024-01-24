@@ -22,6 +22,7 @@ from pathlib import Path
 from timeit import default_timer as dt
 import pickle
 import ast
+from collections import Counter
 
 # plotting imports
 import seaborn as sns        
@@ -43,6 +44,43 @@ import core_regionPoly as rp
 from core_regionPoly import plot_compare_region_counts, plot_coordinates_inside_polygon
 import compile_data as compile
 
+def old_get_nuclei_per_region_df(rpdf, region_df, ont_basedir):
+    # old compile function
+    # get list of colocal ids per region 
+    nuclei_by_region = {i:[] for i in region_df.index.values}
+    for ci, c in zip(rpdf['colocal_id'].values, rpdf['region_ids_list'].values):
+        if c is np.nan or c=='[]': continue
+        for reg_i in ast.literal_eval(c): # to convert str '[91, 148, 149, 151]' to list
+            nuclei_by_region[reg_i].append(ci)
+    
+    # get counts per region
+    region_count_df = []
+    for poly_i, colocal_ids in nuclei_by_region.items():
+        if colocal_ids == []: continue # no nuclei in this region
+
+        # create a dict for each region with counts for each colocal_id
+        ordered_reg_colocals = {
+            'reg_id':int(region_df.region_ids.values[poly_i]),
+            'reg_side':region_df.region_sides.values[poly_i],
+            'region_name':'',
+            'reg_area':region_df.region_areas.values[poly_i],
+        }
+        # get counts of colocal ids in this region
+        reg_colocals = dict(Counter(colocal_ids))
+        for i in range(4):
+            nuc_count = 0 if i not in reg_colocals else reg_colocals[i]
+            ordered_reg_colocals[i] = nuc_count
+        region_count_df.append(ordered_reg_colocals)
+    region_count_df = pd.DataFrame(region_count_df)
+    # rename int colocal_ids to marker name
+    region_count_df = region_count_df.rename(dict(zip(list(range(4)), ['nDapi', 'nZif', 'nGFP', 'nBoth'])), axis=1)
+
+    # add region name and st level to region counts
+    ont_ids = arhfs.load_ontology(os.path.join(ont_basedir, 'Adult Mouse Brain - Allen Brain Atlas V3p1-Ontology.json'))
+    region_count_df['region_name'] = arhfs.get_attributes_for_list_of_ids(ont_ids, region_count_df['reg_id'].to_list(), "name", warn=False)
+    region_count_df['st_level'] = arhfs.get_attributes_for_list_of_ids(ont_ids, region_count_df['reg_id'].to_list(), "st_level", warn=False)
+
+    return region_count_df 
 # print project directory
 # base_dir = r"C:\Users\pasca\Box\Reijmers Lab\Pascal\Code\ABBA_PQA"
 # print('ABBA_PQA')
@@ -92,8 +130,7 @@ for an in animals[-1:]:
         #         coord_arrs2 = [np.array(aFeature['geometry']['coordinates'])]
         #     else: 
         #         raise ValueError(f"{polyType} is not handled")
-
-
+        
         datum_t0 = dt()
         prt_str = '' # add to this string for display of debugging
         geojson_path = datum.geojson_regions_dir_paths
@@ -114,9 +151,9 @@ for an in animals[-1:]:
         rpdf_input = pd.read_csv(datum.rpdf_paths)
         centroids = np.array([ast.literal_eval(c)[::-1] for c in rpdf_input['centroid'].to_list()]) # get centroids
         region_df_GT = pd.read_csv(datum.region_df_paths).assign(poly_index = lambda df:df['Unnamed: 0'])
-        # would need to compare to unthresholded counts but compile.get_nuclei_per_region_df is now incompatible with old
-        region_count_df_GT = pd.read_csv(COMPARE_COUNTS_PATH)
-        region_count_df_GT = region_count_df_GT[region_count_df_GT['img_name'] == os.path.basename(datum.fullsize_paths)[:-8]]
+        region_count_df_GT = old_get_nuclei_per_region_df(rpdf_input, region_df_GT, an.base_dir)
+        # old_filtered_counts = pd.read_csv(COMPARE_COUNTS_PATH)
+        # old_filtered_counts = old_filtered_counts[old_filtered_counts['img_name'] == os.path.basename(datum.fullsize_paths)[:-8]]
         load_t1 = dt()
         
         # localize nuclei to lowest structural level 
