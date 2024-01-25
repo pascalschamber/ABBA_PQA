@@ -580,8 +580,8 @@ if __name__ == '__main__':
     # allow aidf to be none
     animal_info_df_path = r'D:\ReijmersLab\TEL\slides\8-8-22 TEL Project - FC vs FC+EXT TetTag Experiment.xlsx'
     animal_info_df_map_cols = {'treatment':'animal_id', 'treatment.1':'group', 'sex':'sex', 'strain':'strain'}
-    count_channel_names = ['nDapi', 'nZif', 'nGFP', 'nBoth']
-    clc_nuc_info = {3:{'intersecting_label_column':'ch0_intersecting_label', 'intersecting_colocal_id':1}}
+    # count_channel_names = ['nDapi', 'nZif', 'nGFP', 'nBoth']
+    # clc_nuc_info = {3:{'intersecting_label_column':'ch0_intersecting_label', 'intersecting_colocal_id':1}}
     OUTDIR = r'D:\ReijmersLab\TEL\slides\quant_data\counts_test_newpipeline_2024_0121'
     
     # ARGUMENTS
@@ -600,11 +600,13 @@ if __name__ == '__main__':
     ac.init_animals()
     animals = ug.flatten_list([ac.get_animals(COHORT) for COHORT in COHORTS]) [:animals_upto]
     THRESHOLD_DICTS = ac.ImgDB.get_threshold_params()
+    COUNT_CHANNEL_NAMES = ac.ImgDB.get_count_channel_names()
+    CLC_NUC_INFO = ac.ImgDB.get_clc_nuc_info()
 
     # animals = ac.get_animals(['TEL17', 'TEL24', 'TEL48', 'TEL44', 'TEL53', 'TEL55'])
     dispatchers = get_dispatchers(
         animal_info_df_path, animal_info_df_map_cols, animals, 
-        count_channel_names, clc_nuc_info,
+        COUNT_CHANNEL_NAMES, CLC_NUC_INFO,
         THRESHOLD_DICTS, OUTDIR, THE_DATE, MODE, TEST=TEST)
 
     if TEST:
