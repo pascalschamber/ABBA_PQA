@@ -304,7 +304,7 @@ def get_rp_table(disp, quant_img, fullsize_img, channels=3, ch_colocal_id={0:1, 
 
 
 def get_colocalization(disp, rpdf, quant_img, intersection_threshold=0.00, coIds=(1,2), coChs=(0,1), assign_colocal_id=3, prt_str=''):
-    '''
+    ''' #TODO bring info about what to colocalize out into dispatcher
     colocalization method, very fast (<0.2 s)
     grab bboxes for ch0 and ch1 
     for each ch1 nuclei get signal in other channels at that location 
@@ -568,7 +568,7 @@ if __name__ == '__main__':
 
     ###################################################################################################
     # PARAMS
-    COLOCALID_CH_MAP = {0:1, 1:2, 2:0} # dict mapping channels in intensity image to colocal id (e.g dapi (ch2) is colocal_id 0, zif (ch0) is 1, and GFP (ch1) is 2)
+    # COLOCALID_CH_MAP = {0:1, 1:2, 2:0} # dict mapping channels in intensity image to colocal id (e.g dapi (ch2) is colocal_id 0, zif (ch0) is 1, and GFP (ch1) is 2)
     TEST = bool(0) # process centroid subset
     WRITE_OUTPUT = bool(1) # write rpdf and region df to disk
     CLEAN = bool(0) # delete previous counts
@@ -578,6 +578,8 @@ if __name__ == '__main__':
 
     animals = ac.get_animals(['cohort2', 'cohort3', 'cohort4'])[:1]
     start_i_disps = 0 # start from this dispatcher, useful if run was interupted 
+    COLOCALID_CH_MAP = ac.ImgDB.get_colocalid_ch_map()
+    
 
 
     ###################################################################################################

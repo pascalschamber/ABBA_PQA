@@ -539,31 +539,31 @@ NOTES
 # python "C:\Users\pasca\Box\Reijmers Lab\Pascal\Code\Image_Processing\quantification\compile_data_2023_0602.py"
 #############################################################################################################################################
 
-def get_threshold_dicts():
-    # set thresholds
-    THRESHOLD_DICTS = {
+# def get_threshold_dicts():
+#     # set thresholds
+#     THRESHOLD_DICTS = {
         
-        'cohort2': {
-            0:{"intensity_mean": (1, None), "area": (50, 1000), "axis_major_length": (8,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)},
-            1:{"intensity_mean": (50, None), "area": (50, 1000), "axis_major_length": (7,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)}, 
-            2:{"intensity_mean": (20, None), "area": (130, 1000), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
-            3:{"intensity_mean": (20, None), "zif_intensity":(75, None), "intersection_p":(0.33, None), "area": (130, 850), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
-        },
-        'cohort3': {
-            0:{"intensity_mean": (1, None), "area": (50, 1000), "axis_major_length": (8,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)},
-            1:{"intensity_mean": (85, None), "area": (50, 1000), "axis_major_length": (7,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)}, 
-            2:{"intensity_mean": (45, None), "area": (130, 1000), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
-            3:{"intensity_mean": (45, None), "zif_intensity":(85, None), "intersection_p":(0.33, None), "area": (130, 850), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
-        },
-        'cohort4': { # may need to increase zif thresh abit
-            0:{"intensity_mean": (1, None), "area": (50, 1000), "axis_major_length": (8,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)},
-            1:{"intensity_mean": (100, None), "area": (50, 1000), "axis_major_length": (7,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)}, 
-            2:{"intensity_mean": (25, None), "area": (130, 1000), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
-            3:{"intensity_mean": (25, None), "zif_intensity":(100, None), "intersection_p":(0.33, None), "area": (130, 850), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
-        },
-    }
+#         'cohort2': {
+#             0:{"intensity_mean": (1, None), "area": (50, 1000), "axis_major_length": (8,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)},
+#             1:{"intensity_mean": (50, None), "area": (50, 1000), "axis_major_length": (7,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)}, 
+#             2:{"intensity_mean": (20, None), "area": (130, 1000), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
+#             3:{"intensity_mean": (20, None), "zif_intensity":(75, None), "intersection_p":(0.33, None), "area": (130, 850), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
+#         },
+#         'cohort3': {
+#             0:{"intensity_mean": (1, None), "area": (50, 1000), "axis_major_length": (8,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)},
+#             1:{"intensity_mean": (85, None), "area": (50, 1000), "axis_major_length": (7,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)}, 
+#             2:{"intensity_mean": (45, None), "area": (130, 1000), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
+#             3:{"intensity_mean": (45, None), "zif_intensity":(85, None), "intersection_p":(0.33, None), "area": (130, 850), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
+#         },
+#         'cohort4': { # may need to increase zif thresh abit
+#             0:{"intensity_mean": (1, None), "area": (50, 1000), "axis_major_length": (8,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)},
+#             1:{"intensity_mean": (100, None), "area": (50, 1000), "axis_major_length": (7,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)}, 
+#             2:{"intensity_mean": (25, None), "area": (130, 1000), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
+#             3:{"intensity_mean": (25, None), "zif_intensity":(100, None), "intersection_p":(0.33, None), "area": (130, 850), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
+#         },
+#     }
             
-    return THRESHOLD_DICTS
+#     return THRESHOLD_DICTS
 
 if __name__ == '__main__':
     """
@@ -589,11 +589,9 @@ if __name__ == '__main__':
     TEST = bool(0)
     MULTIPROCESS = bool(1)
     MODE = ['reduce_by_region', 'compile_animal_rpdfs'][0]
-    THE_DATE = datetime.now().strftime('%Y_%m%d_%H%M%S')
-    THRESHOLD_DICTS = get_threshold_dicts()
+    THE_DATE = datetime.now().strftime('%Y_%m%d_%H%M%S')    
     COHORTS = ['cohort2', 'cohort3', 'cohort4']
     animals_upto = 1 if TEST else 1
-
 
     ##################################################################################################
     # MAIN
@@ -601,6 +599,8 @@ if __name__ == '__main__':
     ac = AnimalsContainer()
     ac.init_animals()
     animals = ug.flatten_list([ac.get_animals(COHORT) for COHORT in COHORTS]) [:animals_upto]
+    THRESHOLD_DICTS = ac.ImgDB.get_threshold_params()
+
     # animals = ac.get_animals(['TEL17', 'TEL24', 'TEL48', 'TEL44', 'TEL53', 'TEL55'])
     dispatchers = get_dispatchers(
         animal_info_df_path, animal_info_df_map_cols, animals, 

@@ -5,6 +5,8 @@ import traceback
 import shutil
 import random
 import json
+from copy import deepcopy
+from .utils_ImgDB import ImgDB
 
 
 class AnimalsContainer:
@@ -61,15 +63,22 @@ class AnimalsContainer:
         #################################
         assert os.path.exists(self.config_path), f'config path does not exist {self.config_path}'
         config_args = json.load(open(self.config_path))
-        
+        # parse AnimalsContainer args
+        animal_container_args = deepcopy(config_args.get('AnimalsContainer'))
+        assert animal_container_args is not None, 'animal container args not found, ensure config file has key \'AnimalsContainer\'.'
         supported_args = [
             'image_data_base_dir', 'image_dir_names', 'animal_id_prefix', 'qupath_subdirs', 'align_files_dict', 'cohorts'
         ]
         for arg in supported_args:
-            if arg not in config_args:
+            if arg not in animal_container_args:
                 print(f'WARN: {arg} not found in config file', flush=True)
             else:
-                setattr(self, arg, config_args[arg])
+                setattr(self, arg, animal_container_args[arg])
+        
+        # parse ImgDB args
+        imgdb_args = deepcopy(config_args.get('ImgDB'))
+        assert imgdb_args is not None, 'ImgDB args not found, ensure config file has key \'ImgDB\'.'
+        self.ImgDB = ImgDB(**imgdb_args)
 
         
     def __str__(self):

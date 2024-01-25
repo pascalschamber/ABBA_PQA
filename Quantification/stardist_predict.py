@@ -300,11 +300,11 @@ if __name__ == '__main__':
     """
     # PARAMS
     ##############################################################################################################
-    NORM_DICT = {
-        'cohort2':{0:{'nmin':20, 'nmax':99.8}, 1:{'nmin':20, 'nmax':99.8}, 2:{'nmin':20, 'nmax':99.8}},
-        'cohort3':{0:{'nmin':30, 'nmax':99.8}, 1:{'nmin':30, 'nmax':99.8}, 2:{'nmin':20, 'nmax':99.8}},
-        'cohort4':{0:{'nmin':30, 'nmax':99.8}, 1:{'nmin':30, 'nmax':99.8}, 2:{'nmin':20, 'nmax':99.8}},
-    }
+    # NORM_DICT = {
+    #     'cohort2':{0:{'nmin':20, 'nmax':99.8}, 1:{'nmin':20, 'nmax':99.8}, 2:{'nmin':20, 'nmax':99.8}},
+    #     'cohort3':{0:{'nmin':30, 'nmax':99.8}, 1:{'nmin':30, 'nmax':99.8}, 2:{'nmin':20, 'nmax':99.8}},
+    #     'cohort4':{0:{'nmin':30, 'nmax':99.8}, 1:{'nmin':30, 'nmax':99.8}, 2:{'nmin':20, 'nmax':99.8}},
+    # }
     CLEAN = bool(0)
     MULTIPROCESS = bool(0) 
     SKIP_ALREADY_COMPLETED = bool(0) 
@@ -325,6 +325,7 @@ if __name__ == '__main__':
     ac = AnimalsContainer()
     ac.init_animals(failOnError=False)
     animals = ac.get_animals(animals_to_get)
+    NORM_DICT = ac.ImgDB.get_normalization_params()
 
     # init dispatchers
     disps = get_dispatchers(
