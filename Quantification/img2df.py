@@ -21,6 +21,7 @@ from timeit import default_timer as dt
 import concurrent
 import concurrent.futures
 import multiprocessing
+from copy import deepcopy
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))) # add parent dir to sys.path
 from utilities.utils_image_processing import read_img, print_array_info, convert_16bit_image
@@ -237,7 +238,7 @@ def load_nuc_intensity_imgs(disp, prt_str=''):
     st_time, len_init_prt_str = dt(), len(prt_str)
     prt_str += (f'fullsize, quant filenames: {Path(disp.datum.fullsize_paths).stem}, {Path(disp.datum.quant_dir_paths).stem}\n')
     quant_img = imread(disp.datum.quant_dir_paths)
-    fullsize_img, _ = read_img(disp.datum.fullsize_paths)
+    fullsize_img = read_img(disp.datum.fullsize_paths, **disp.read_img_kwargs)
     prt_str += (f'images loaded in {dt() - st_time}.\n')
     if len_init_prt_str==0: # i.e. was called here and not from a func that didn't expect this output
         print(prt_str, flush=True)
@@ -326,14 +327,15 @@ def get_colocalization(disp, rpdf, quant_img, intersection_threshold=0.00, coIds
     # extract bboxes for zif and gfp channels
     ch0_bboxes, ch0_df_indicies, ch1_bboxes, ch1_df_indicies = (rpdf[rpdf['colocal_id'] == coIds[0]]['bbox'].to_list(), rpdf[rpdf['colocal_id'] == coIds[0]].index, 
                                                                 rpdf[rpdf['colocal_id'] == coIds[1]]['bbox'].to_list(), rpdf[rpdf['colocal_id'] == coIds[1]].index)
-
+    print('starting colocalization')
     # colocalization
     colocal_instances_df = []
+    ch_intersecting_label_col = f'ch{coChs[0]}_intersecting_label'
     for cl1i, ch1_bbox in zip(ch1_df_indicies, ch1_bboxes):
         
         # extract bbox coords from nuclei image
         minx,miny,maxx,maxy = ch1_bbox
-        ch0_nucleus_img, ch1_nucleus_img = (quant_img[...,coChs[i]][minx:maxx, miny:maxy] for i in coChs) # ch1_nucleus_img = quant_img[...,coChs[1]][minx:maxx, miny:maxy]
+        ch0_nucleus_img, ch1_nucleus_img = (quant_img[...,i][minx:maxx, miny:maxy] for i in coChs) # ch1_nucleus_img = quant_img[...,coChs[1]][minx:maxx, miny:maxy]
         if ch0_nucleus_img.max() <= 0: # if no signal in ch0 skip
             continue 
         
@@ -358,20 +360,20 @@ def get_colocalization(disp, rpdf, quant_img, intersection_threshold=0.00, coIds
         colocal4_row = dict(rpdf.loc[cl1i, :])
         colocal4_row['colocal_id'] = assign_colocal_id
         colocal4_row['intersection_p'] = intersection_percent
-        colocal4_row['ch0_intersecting_label'] = int(largest_intersecting_label_ch0)
+        colocal4_row[ch_intersecting_label_col] = int(largest_intersecting_label_ch0)
         #TODO: add colocal intensity for zif channel here? e.g. rpdf[(rpdf['colocal_id'==coIds[0]) & (rpdf['label']==largest_intersecting_label_ch0)]['intensity_mean'].values[0]
         colocal_instances_df.append(colocal4_row)
             
 
     # convert rows to df
     colocal_instances_df = pd.DataFrame(colocal_instances_df)
-    
+    print('ended colocalization')
     # add new columns to rpdf, if they don't exist already e.g. if multiple colocalizations are being done
     rpdf_colocal = rpdf.copy(deep=True)
     if 'intersection_p' not in rpdf_colocal.columns:
         rpdf_colocal['intersection_p'] = np.nan
-    if f'ch{coChs[0]}_intersecting_label' not in rpdf_colocal.columns:
-        rpdf_colocal[f'ch{coChs[0]}_intersecting_label'] = np.nan
+    if ch_intersecting_label_col not in rpdf_colocal.columns:
+        rpdf_colocal[ch_intersecting_label_col] = np.nan
     rpdf_final = pd.concat([rpdf_colocal, colocal_instances_df], ignore_index=True)
     
     prt_str+=(f"{rpdf_final.value_counts('colocal_id')}\n")
@@ -380,69 +382,8 @@ def get_colocalization(disp, rpdf, quant_img, intersection_threshold=0.00, coIds
     if len_init_prt_str==0: # i.e. was called here and not from a func that didn't expect this output
         print(prt_str, flush=True)
         return rpdf_final
-    
+    print('returning colocalization')
     return rpdf_final, prt_str
-
-
-
-
-
-
-# @nb.jit(nopython=True)
-# def ray_casting(x, y, centroid_x, centroid_y):
-#     num_vertices = len(x)
-#     j = num_vertices - 1
-#     odd_nodes = False
-#     for i in range(num_vertices):
-#         if ((y[i] < centroid_y and y[j] >= centroid_y) or (y[j] < centroid_y and y[i] >= centroid_y)) and (x[i] <= centroid_x or x[j] <= centroid_x):
-#             odd_nodes ^= (x[i] + (centroid_y - y[i]) / (y[j] - y[i]) * (x[j] - x[i]) < centroid_x) # The ^ operator does a binary xor. a ^ b will return a value with only the bits set in a or in b but not both
-#         j = i
-#     return odd_nodes
-
-# @nb.jit(nopython=True) #, parallel=True)
-# def point_in_polygon(polygons_x, polygons_y, centroids):
-#     num_polygons = len(polygons_x)
-#     num_centroids = len(centroids)
-#     results = np.zeros((num_centroids, num_polygons), dtype=np.bool_)
-
-#     for i in nb.prange(num_centroids):
-#         centroid_x, centroid_y = centroids[i]
-#         for j in nb.prange(num_polygons):
-#             if ray_casting(polygons_x[j], polygons_y[j], centroid_x, centroid_y):
-#                 results[i, j] = True
-
-#     return results
-
-# def init_nb_points_in_polygon():
-#     polygons_x, polygons_y, = nb.typed.List([np.asarray([i for i in range(100)]) for i in range(10)]), nb.typed.List([np.asarray([i for i in range(100)]) for i in range(10)])
-#     centroids = np.array([[i for i in range(1000)], [i for i in range(1000)]]).T
-#     res = point_in_polygon(polygons_x, polygons_y, centroids)
-
-
-
-
-# def numba_get_nuclei_counts_by_region(self, rpdf_final):
-#     regions_t0 = timeit.default_timer()
-#     region_df = load_geometries(self.datum.geojson_regions_dir_paths)
-#     polygons = [poly for poly in region_df.region_polygons.to_list()] 
-#     polygons_x, polygons_y = nb.typed.List(np.asarray(poly).T[0] for poly in polygons), nb.typed.List(np.asarray(poly).T[1] for poly in polygons)
-
-#     centroids =  np.array([c[::-1] for c in rpdf_final['centroid'].to_list()])
-#     if self.TEST: centroids = centroids[:1000]
-#     print(f'num regions: {len(region_df.region_polygons)}, num nuclei: {len(centroids)}', flush=True)
-
-#     # Perform the calculation
-#     results = point_in_polygon(polygons_x, polygons_y, centroids)
-#     centroid_regions = {i:list(np.where(results[i])[0]) for i in range(len(centroids))} # store dict of regions for each nuclei
-
-    
-#     # append to rpdf_final a column that stores a list of each region a centroid is found in
-#     if self.TEST: centroid_regions = dict(zip([i for i in range(len(rpdf_final))],list(centroid_regions.values()) + [np.nan for i in range(len(rpdf_final)-len(centroids))]))
-#     rpdf_final['region_ids_list'] = list(centroid_regions.values())
-#     # TODO filter so only parent, lowest st levels, and side?
-    
-#     print(f'get_nuclei_counts_by_region took: {timeit.default_timer() - regions_t0}', flush=True)
-#     return rpdf_final, region_df
 
 
 def numba_get_nuclei_counts_by_region(geojson_path, rpdf_coloc, ont, TEST=False, prt_str=''):
@@ -493,16 +434,30 @@ class Dispatcher:
             setattr(self, k, v)
         self.prt_str = f"{'`'*75}\n{self.disp_i} --> {self.img_name}\n" # for display of info colllected during processing
     
+    def colocalize(self, colocalization_params, rpdf, quant_img, prt_str=''):
+
+        for clc_props in colocalization_params:
+            coChs, coIds, assign_colocal_id = clc_props['coChs'], clc_props['coIds'], clc_props['assign_colocal_id']
+            rpdf, prt_str = get_colocalization(self, rpdf, quant_img, intersection_threshold=0.00, 
+                                               coIds=coIds, coChs=coChs, assign_colocal_id=assign_colocal_id, prt_str=prt_str)
+        return rpdf, prt_str
+    
+
     def run(self):
         print(f'\nstarting {self.disp_i} --> {self.img_name}', flush=True)
         datum_st_time = dt()
+        exit_code = 0
         try:
             # get region props from quant image and perform colocalization
             rpdf, quant_img, self.prt_str = get_region_props(self, ch_colocal_id=self.ch_colocal_id, prt_str=self.prt_str)
-            rpdf_coloc, self.prt_str = get_colocalization(self, rpdf, quant_img, prt_str=self.prt_str)
-            # rpdf_coloc = rpdf_coloc.assign(eccentricity = rpdf['axis_major_length']/rpdf['axis_minor_length']) # TODO: # add eccentricity to rpdf? 
+            print('get_region_props finished')
+            
+            rpdf_coloc, self.prt_str = self.colocalize(self.colocalization_params, rpdf, quant_img, prt_str=self.prt_str)
+            # rpdf_coloc, self.prt_str = get_colocalization(self, rpdf, quant_img, prt_str=self.prt_str)
             
             rpdf_final, region_df, self.prt_str = numba_get_nuclei_counts_by_region(self.datum.geojson_regions_dir_paths, rpdf_coloc, self.ont, TEST=self.TEST, prt_str=self.prt_str)
+            # add eccentricity to rpdf
+            rpdf_final = rpdf_final.assign(eccentricity = rpdf_final['axis_major_length']/rpdf_final['axis_minor_length'])
             # rpdf_final, region_df, prt_str = numba_get_nuclei_counts_by_region(self, rpdf_coloc) #get_nuclei_counts_by_region(self, rpdf_coloc)
             
             # save rpdfs and region_df
@@ -517,19 +472,28 @@ class Dispatcher:
             self.prt_str+=(f'{self.disp_i} --> {self.img_name} completed in {dt()-datum_st_time}\n')
             
             if self.TEST: return rpdf_final, region_df
-            return 0
+            
         except Exception as e:
             self.prt_str += (f"An error occurred: {e}")
-            return 1
+            exit_code = 1
         finally:
             print(self.prt_str, flush=True)
+            return exit_code
+
+    
+            
 
 
-def get_dispatchers(animals, TEST=False, BACKGROUND_SUBRACTION=False, WRITE_OUTPUT=True, COLOCALID_CH_MAP={0:1, 1:2, 2:0}):
+def get_dispatchers(animals, TEST=False, BACKGROUND_SUBRACTION=False, WRITE_OUTPUT=True, 
+                    COLOCALID_CH_MAP={0:1, 1:2, 2:0}, read_img_kwargs={}, colocalization_params=[],
+    ):
     dispatchers, disp_count = [], 0
     for an in animals:
         # create counts directory for each animal
         counts_dir = verify_outputdir(os.path.join(an.base_dir, 'counts'))
+        # read img kwargs 
+        an_id = an.animal_id_to_int(an.animal_id)
+        d_read_img_kwargs = {k:v if not callable(v) else v(an_id) for k,v in read_img_kwargs.items()} if read_img_kwargs else {}
         
         for d in an.get_valid_datums(['fullsize_paths', 'quant_dir_paths', 'geojson_regions_dir_paths']):
             dispatchers.append(Dispatcher(
@@ -540,12 +504,15 @@ def get_dispatchers(animals, TEST=False, BACKGROUND_SUBRACTION=False, WRITE_OUTP
                     TEST=TEST,
                     BACKGROUND_SUBRACTION=BACKGROUND_SUBRACTION,
                     WRITE_OUTPUT=WRITE_OUTPUT,
+                    read_img_kwargs = d_read_img_kwargs,
+                    colocalization_params = deepcopy(colocalization_params),
                     cohort = an.cohort['cohort_name'],
                     img_name = Path(d.fullsize_paths).stem[:-4],
                     ont = arhfs.Ontology(),
                     ch_colocal_id=COLOCALID_CH_MAP,
                 ))
             disp_count+=1
+    print(f'num dispatchers {disp_count}', flush=True)
     return dispatchers
 
 
@@ -557,8 +524,8 @@ if __name__ == '__main__':
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # CONDA CODE
     # conda activate stardist
-    # cd "C:\Users\pasca\Box\Reijmers Lab\Pascal\Code\Image_Processing\quantification"
-    # python 'C:\Users\pasca\Box\Reijmers Lab\Pascal\Code\Image_Processing\quantification\img2df.py'
+    # cd "C:\Users\pasca\Box\Reijmers Lab\Pascal\Code\ABBA_PQA\Quantification"
+    # python "C:\Users\pasca\Box\Reijmers Lab\Pascal\Code\ABBA_PQA\Quantification\img2df.py"
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # '''
     ###################################################################################################
@@ -572,13 +539,16 @@ if __name__ == '__main__':
     TEST = bool(0) # process centroid subset
     WRITE_OUTPUT = bool(1) # write rpdf and region df to disk
     CLEAN = bool(0) # delete previous counts
-    MULTIPROCESS = bool(1) # use Processpool for parallel processing, else run serially
+    MULTIPROCESS = bool(0) # use Processpool for parallel processing, else run serially
     BACKGROUND_SUBRACTION = bool(1) # use tophat algorithm to correct for uneven illumination
     MAX_WORKERS = 12 # num of cores, if running multithreded, for me 12
+    READ_IMG_KWARGS = {'flip_gr_ch':lambda an_id: True if (an_id > 29 and an_id < 50) else False} 
 
     animals = ac.get_animals(['cohort2', 'cohort3', 'cohort4'])[:1]
     start_i_disps = 0 # start from this dispatcher, useful if run was interupted 
+    end_i_disps = 1
     COLOCALID_CH_MAP = ac.ImgDB.get_colocalid_ch_map()
+    COLOCALIZATION_PARAMS = ac.ImgDB.colocalizations
     
 
 
@@ -587,9 +557,11 @@ if __name__ == '__main__':
     if CLEAN: ac.clean_animal_dir(animals, 'counts') 
         
     # get dispatchers
-    dispatchers = get_dispatchers(animals, TEST=TEST, BACKGROUND_SUBRACTION=BACKGROUND_SUBRACTION, WRITE_OUTPUT=WRITE_OUTPUT, COLOCALID_CH_MAP=COLOCALID_CH_MAP)
-    disps = dispatchers[start_i_disps:]
-    print(f'num dispatchers {len(disps)}', flush=True)
+    disps = get_dispatchers(
+        animals, TEST=TEST, BACKGROUND_SUBRACTION=BACKGROUND_SUBRACTION, WRITE_OUTPUT=WRITE_OUTPUT, 
+        COLOCALID_CH_MAP=COLOCALID_CH_MAP, read_img_kwargs=READ_IMG_KWARGS, colocalization_params=COLOCALIZATION_PARAMS,
+    ) [start_i_disps:end_i_disps]
+    print(f'processing num dispatchers {len(disps)}', flush=True)
     
     # init numba functions
     # init_nb_points_in_polygon() 

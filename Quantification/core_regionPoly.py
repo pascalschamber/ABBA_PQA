@@ -221,9 +221,10 @@ class regionPoly:
     def __init__(self, obj_i, anobj, st_level, GO_FAST=True):
         self.valid_polytypes = ['main', 'exteriors', 'interiors']
         self.count_polytypes = None # used for debugging
-        self.obj_i = obj_i
+        self.obj_i = obj_i # this is index of polygon collection in geojson file (i.e. poly_index)
         self.st_level = st_level
         self.total_area = None
+        self.region_extent = None # store bounding box coordinates
         self.poly_count = 0
         self.poly_arrays = {} # store polys here
         self.GO_FAST = GO_FAST
@@ -231,10 +232,13 @@ class regionPoly:
 
 
     def ingest_obj(self, anobj):
-        self.anobj = anobj
+        self.anobj = anobj # might want to not store to conserve memory if possible
         self.region_name = None
-        self.obj_id = anobj['properties']['measurements']['ID']
-        self.obj_names = ', '.join(anobj['properties']['classification']['names'])
+        self.obj_id = anobj['properties']['measurements']['ID']  # this is id of region in ontology
+        # self.obj_names = ', '.join(anobj['properties']['classification']['names'])
+        obj_names = anobj['properties']['classification']['names']
+        self.reg_side = str(obj_names[0])
+        self.acronym = str(obj_names[1])
         self.geometry_type = anobj['geometry']['type']
 
 
@@ -318,6 +322,7 @@ class regionPoly:
 
     def extract_info(self):
         self.region_area = self.get_total_area(self.poly_arrays)
+        self.region_extent = self.get_region_extent(self.poly_arrays)
         self.all_obj_atlas_coords = self.get_atlas_coords(self.anobj) # NEW 2023_0808, not required
         if not self.GO_FAST:
             self.get_count_polytypes()
@@ -330,7 +335,6 @@ class regionPoly:
             polyType = p_arr['polyType']
             self.count_polytypes[polyType]+=1
             
-
     def get_total_area(self, poly_arrays):
         # get area of regions to include minus areas to exclude
         total_area = 0
@@ -340,10 +344,12 @@ class regionPoly:
             total_area += area
         return total_area
     
+    def get_region_extent(self, poly_arrays):
+        # get bounding box of all polygons comprising this region
+        return list(get_polygons_extent([pd['arr'] for pd in poly_arrays.values()]))
+    
     def get_atlas_coords(self, geojson_obj):
-        ''' 
-            extracts the atlas coords for each region from geojson file if present NEW 2023_0808
-        ''' 
+        # extracts the atlas coords for each region from geojson file if present
         atlas_coords_not_found = 0 # store number of coords not found
         atlas_measurements_keys = ['Atlas_X', 'Atlas_Y', 'Atlas_Z']
         obj_output = []
@@ -365,8 +371,8 @@ class regionPoly:
             'reg_id':self.obj_id, 
             'st_level':self.st_level,
             'region_name':self.region_name,
-            'reg_side':self.obj_names.split(', ')[0],
-            'acronym':self.obj_names.split(', ')[1],
+            'reg_side':self.reg_side,
+            'acronym':self.acronym,
             'region_area':self.region_area,
             'singles':[], 'multis':[]}
         for coord_dict in self.numba_format:
@@ -385,12 +391,13 @@ class regionPoly:
             # so new implementations that need these coordinate arrays should access them through .numba_format
         atx, aty, atz = self.all_obj_atlas_coords if len(self.all_obj_atlas_coords)==3 else [np.nan]*3
         row_dict = dict(zip(
-            ['poly_index', 'region_ids', 'region_sides', 'region_areas', 'atlas_x', 'atlas_y', 'atlas_z'],
-            [self.obj_i, self.obj_id, self.obj_names.split(', ')[0], self.region_area, atx, aty, atz]
+            ['poly_index', 'region_ids', 'acronym', 'region_name', 'region_sides', 'region_areas', 'region_extents', 'atlas_x', 'atlas_y', 'atlas_z'],
+            [self.obj_i, self.obj_id, self.acronym, self.region_name, self.reg_side, self.region_area, self.region_extent, atx, aty, atz]
         ))
         return row_dict
         
-
+# general utils
+##############################################
 def polygon_area(region_poly):
     ''' Calculates the area of a complex polygon using the shoelace formula. Calculates signed area, so abs is taken to get the actual area '''
     assert region_poly.shape[1] == 2 and region_poly.ndim==2, f'error --> region poly shape {region_poly.shape}'
@@ -408,10 +415,6 @@ def pixel_to_um(pixel_area, pixel_size_in_microns=0.650):
     pixel_area_in_um = (pixel_size_in_microns / 1000) ** 2 * pixel_area * 1e6
     return pixel_area_in_um
 
-
-
-# plotting helpers
-##############################################
 def get_polygons_extent(poly_list):
     minimum_x, minimum_y, maximum_x, maximum_y = np.inf, np.inf, 0, 0
     
@@ -432,6 +435,9 @@ def get_polygons_extent(poly_list):
             minimum_y = min_y
     return minimum_x, minimum_y, maximum_x, maximum_y
 
+
+# plotting helpers
+##############################################
 def plot_polygons(apoly, plot_points=None, fig_title=None, show_legend=True, region_outlines=None, region_label=False, SAVE_PATH=None, limit_plot=True, fig_size=(20,20), fc_alpha=0.2, pad=200):
     fig,ax = plt.subplots(1, figsize=fig_size)       
     # support for passing a single array of coordinates too

@@ -106,7 +106,7 @@ def show_channels(img, chs=[0,1,2], clip_max=None):
 
     # normalize, or apply label color map
     if img.dtype == np.int32: # labels
-        cmaps = [get_label_colormap()]
+        cmaps = [get_label_colormap() for i in range(img.shape[-1])]
     elif img.dtype == np.uint16: # images
         if clip_max is None: clip_max = img.max() # equates to min/max normalization
         img = u2.convert_16bit_image(img, NORM=True, CLIP=(0,clip_max))

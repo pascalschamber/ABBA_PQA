@@ -58,7 +58,8 @@
             {"name":"GFP", "ch_idx":1, "colocal_id":2},
             {"name":"Zif", "ch_idx":0, "colocal_id":1}],
         "colocal_nuclei_info": [
-            {"name":"GFP+Zif", "ch_idx":[1,2], "colocal_id":3}
+            {"name":"GFP+Zif", "ch_idx":[0,1], "co_ids":[1,2], "colocal_id":3},
+            {"name":"GFP+Zif+Dapi", "ch_idx":[2,1], "co_ids":[0,3], "colocal_id":4}
         ],
         "normalization_params": {
             "cohort2": {"0": {"nmin": 20, "nmax": 99.8}, "1": {"nmin": 20, "nmax": 99.8}, "2": {"nmin": 20, "nmax": 99.8}}, 

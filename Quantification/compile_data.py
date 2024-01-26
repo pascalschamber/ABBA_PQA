@@ -354,8 +354,6 @@ class Dispatcher:
             # check extant regionprops vs filters
             # TODO, create class called FatalError
 
-            # add eccentricity to rpdf
-            rpdf = rpdf.assign(eccentricity = rpdf['axis_major_length']/rpdf['axis_minor_length'])
             rpdf['zif_intensity'] = rpdf['ch0_intersecting_label'].map(
                 rpdf.loc[rpdf['colocal_id'] == 1].set_index('label')['intensity_mean'])
 
