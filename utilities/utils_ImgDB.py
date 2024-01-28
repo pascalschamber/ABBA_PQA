@@ -23,8 +23,8 @@ class ImgDB:
         if self.colocal_nuclei_info is not None:
             for clc_dict in self.colocal_nuclei_info:
                 coChs = self.check_not_none(clc_dict.get("ch_idx"))
-                if len(coChs) != 2:
-                    raise ValueError (f"colocalization must be between 2 channels, got {coChs}")
+                # if len(coChs) != 2:
+                #     raise ValueError (f"colocalization must be between 2 channels, got {coChs}")
                 coIds = self.check_not_none(clc_dict.get("co_ids"))
                 # ensure assigned_colocal_id is unique
                 assign_colocal_id = self.check_not_none(clc_dict.get("colocal_id"))
@@ -34,7 +34,6 @@ class ImgDB:
                 self.colocalizations.append({'coChs':coChs, 'coIds':coIds, 'assign_colocal_id':assign_colocal_id, 
                                              'intersecting_label_column':f"ch{coChs[0]}_intersecting_label", "intersecting_colocal_id":coIds[1], 
                                              "other_intensity_name":f"{self.colocal_ids[coIds[0]]['name']}_intensity"})
-        # sort colocal ids
         self.sort_colocal_ids()
         self.reformat_json_params('normalization_params')
         self.reformat_json_params('threshold_params')

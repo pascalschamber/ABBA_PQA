@@ -101,7 +101,7 @@ def plot_image_grid(images, masks=False, mask_alpha=0.0005, mask_color=(255,0,0)
     else:        plt.show()
 
 
-def show_channels(img, chs=[0,1,2], clip_max=None):
+def show_channels(img, chs=[0,1,2], clip_max=None, axs=None):
     assert img.ndim == 3
 
     # normalize, or apply label color map
@@ -115,9 +115,12 @@ def show_channels(img, chs=[0,1,2], clip_max=None):
         rgb = ['red', 'green', 'blue']
         cmaps = [generate_custom_colormap(rgb[c], img) for c in chs]
 
-    for i in range(img.shape[-1]):
-        plt.imshow(img[...,i], cmap=cmaps[i])
-        plt.show()
+    for i in chs:
+        if axs is None:
+            plt.imshow(img[...,i], cmap=cmaps[i]); plt.show()
+        else:
+            axs[i].imshow(img[...,i], cmap=cmaps[i])
+    
 
             
             

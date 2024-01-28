@@ -427,6 +427,13 @@ def numba_get_nuclei_counts_by_region(geojson_path, rpdf_coloc, ont, TEST=False,
     if TEST: rpdf_final = rpdf_final.loc[:1000, :]
     return rpdf_final, region_df, prt_str
 
+def colocalize(self, colocalization_params, rpdf, quant_img, prt_str=''):
+    for clc_props in colocalization_params:
+        coChs, coIds, assign_colocal_id = clc_props['coChs'], clc_props['coIds'], clc_props['assign_colocal_id']
+        rpdf, prt_str = get_colocalization(self, rpdf, quant_img, intersection_threshold=0.00, 
+                                            coIds=coIds, coChs=coChs, assign_colocal_id=assign_colocal_id, prt_str=prt_str)
+    return rpdf, prt_str
+
 
 class Dispatcher:
     def __init__(self, **kwargs):
@@ -434,13 +441,7 @@ class Dispatcher:
             setattr(self, k, v)
         self.prt_str = f"{'`'*75}\n{self.disp_i} --> {self.img_name}\n" # for display of info colllected during processing
     
-    def colocalize(self, colocalization_params, rpdf, quant_img, prt_str=''):
-
-        for clc_props in colocalization_params:
-            coChs, coIds, assign_colocal_id = clc_props['coChs'], clc_props['coIds'], clc_props['assign_colocal_id']
-            rpdf, prt_str = get_colocalization(self, rpdf, quant_img, intersection_threshold=0.00, 
-                                               coIds=coIds, coChs=coChs, assign_colocal_id=assign_colocal_id, prt_str=prt_str)
-        return rpdf, prt_str
+    
     
 
     def run(self):
@@ -452,7 +453,7 @@ class Dispatcher:
             rpdf, quant_img, self.prt_str = get_region_props(self, ch_colocal_id=self.ch_colocal_id, prt_str=self.prt_str)
             print('get_region_props finished')
             
-            rpdf_coloc, self.prt_str = self.colocalize(self.colocalization_params, rpdf, quant_img, prt_str=self.prt_str)
+            rpdf_coloc, self.prt_str = colocalize(self.colocalization_params, rpdf, quant_img, prt_str=self.prt_str)
             # rpdf_coloc, self.prt_str = get_colocalization(self, rpdf, quant_img, prt_str=self.prt_str)
             
             rpdf_final, region_df, self.prt_str = numba_get_nuclei_counts_by_region(self.datum.geojson_regions_dir_paths, rpdf_coloc, self.ont, TEST=self.TEST, prt_str=self.prt_str)
