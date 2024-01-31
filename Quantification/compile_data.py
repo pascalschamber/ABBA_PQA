@@ -508,45 +508,7 @@ def get_dispatchers(
     print(f'num dispatchers: {len(dispatchers)}\nmode: {MODE} (test={TEST}).\nThresholds:{THRESHOLD_DICTS}\n\n')
     return dispatchers
 
-"""
-#############################################################################################################################################
-NOTES
-~~~~~
-    - intensity thresholds
-        - cohort3 == 530
-        - cohort2 == 894
-            FC zif mean intensity: 894.6 --> keep: 3407503 / 8105278 (42.041 %)
-            EXT zif mean intensity: 849.0 --> keep: 2065443 / 6080181 (33.97 %)
 
-    - lowest pval so far
-        - threshold_dict = dict(area_threshold = 700, intersectionP_threshold = 0.70, zif_intensity_threshold = 530)
-    )
-    previous thresholds:
-    # 'cohort2':{
-        #     'area_threshold_min': 75, 'area_threshold_max': 350,
-        #     'intersectionP_threshold': 0.45,
-        #     'zif_intensity_threshold': 550, 'gfp_intensity_threshold': 100,
-        #     'axis_major_length_min': 5, 'axis_major_length_max': 85, 
-        #     'axis_minor_length_min': 4, 'axis_minor_length_max': 31
-        # },
-
-        # 'cohort3':{
-        #     'area_threshold_min': 75, 'area_threshold_max': 350, 
-        #     'intersectionP_threshold': 0.45, 
-        #     'zif_intensity_threshold': 360, 'gfp_intensity_threshold': 100, 
-        #     'axis_major_length_min': 5, 'axis_major_length_max': 85, 
-        #     'axis_minor_length_min': 4, 'axis_minor_length_max': 31
-        # },
-
-        # 'cohort4':{
-        #     'area_threshold_min': 75, 'area_threshold_max': 350, 
-        #     'intersectionP_threshold': 0.45, 
-        #     'zif_intensity_threshold': 375, 'gfp_intensity_threshold': 160, 
-        #     'axis_major_length_min': 12, 'axis_major_length_max': 85, 
-        #     'axis_minor_length_min': 7, 'axis_minor_length_max': 31
-        # },
-#############################################################################################################################################
-"""
 
 #############################################################################################################################################
 # conda
@@ -554,31 +516,6 @@ NOTES
 # python "C:\Users\pasca\Box\Reijmers Lab\Pascal\Code\Image_Processing\quantification\compile_data_2023_0602.py"
 #############################################################################################################################################
 
-# def get_threshold_dicts():
-#     # set thresholds
-#     THRESHOLD_DICTS = {
-        
-#         'cohort2': {
-#             0:{"intensity_mean": (1, None), "area": (50, 1000), "axis_major_length": (8,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)},
-#             1:{"intensity_mean": (50, None), "area": (50, 1000), "axis_major_length": (7,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)}, 
-#             2:{"intensity_mean": (20, None), "area": (130, 1000), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
-#             3:{"intensity_mean": (20, None), "zif_intensity":(75, None), "intersection_p":(0.33, None), "area": (130, 850), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
-#         },
-#         'cohort3': {
-#             0:{"intensity_mean": (1, None), "area": (50, 1000), "axis_major_length": (8,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)},
-#             1:{"intensity_mean": (85, None), "area": (50, 1000), "axis_major_length": (7,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)}, 
-#             2:{"intensity_mean": (45, None), "area": (130, 1000), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
-#             3:{"intensity_mean": (45, None), "zif_intensity":(85, None), "intersection_p":(0.33, None), "area": (130, 850), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
-#         },
-#         'cohort4': { # may need to increase zif thresh abit
-#             0:{"intensity_mean": (1, None), "area": (50, 1000), "axis_major_length": (8,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)},
-#             1:{"intensity_mean": (100, None), "area": (50, 1000), "axis_major_length": (7,85), "axis_minor_length": (7,31), "eccentricity":(None, 2.9)}, 
-#             2:{"intensity_mean": (25, None), "area": (130, 1000), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
-#             3:{"intensity_mean": (25, None), "zif_intensity":(100, None), "intersection_p":(0.33, None), "area": (130, 850), "axis_major_length": (12,85), "axis_minor_length": (8,31), "eccentricity":(None, 2.9)},
-#         },
-#     }
-            
-#     return THRESHOLD_DICTS
 
 if __name__ == '__main__':
     """
