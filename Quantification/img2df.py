@@ -33,6 +33,96 @@ import core_regionPoly as rp
 
 
 
+# def get_colocalization(disp, rpdf, quant_img, intersection_threshold=0.00, coIds=(1,2), coChs=(0,1), assign_colocal_id=3, prt_str=''):
+#     ''' #TODO bring info about what to colocalize out into dispatcher
+#     colocalization method, very fast (<0.2 s)
+#     grab bboxes for ch0 and ch1 
+#     for each ch1 nuclei get signal in other channels at that location 
+#     also gets the label of ch0 nuclei colocal with ch1
+#     ARGS
+#         - rpdf (pd.Dataframe) --> region props as a dataframe (e.g. by using regionprops_table)
+#         - quant_img (np.array[int]) --> label image containing detected nuclei
+#         - intersection_threshold (float) --> intersection is valid between nuclei if greater than this percentage (range 0,1)
+#         - coIds (tup[int,int]) --> colocal ids in rpdf to perform colocalization, colocal nuclei are constructed from second value
+#         - coChs (tup[int,int]) --> channels in quant_img corresponding to coIDs
+#         - assign_colocal_id (int) --> colocal id to assign resulting colocalization in rpdf
+#     '''
+
+#     # for testing intersection images
+#     # self, intersection_threshold = disps[0], 0.0
+#     # rpdf, quant_img = get_region_props(self)
+#     # plot_count = 0
+#     st_time, len_init_prt_str = dt(), len(prt_str)
+#     # extract bboxes for zif and gfp channels
+#     ch0_bboxes, ch0_df_indicies, ch1_bboxes, ch1_df_indicies = (rpdf[rpdf['colocal_id'] == coIds[0]]['bbox'].to_list(), rpdf[rpdf['colocal_id'] == coIds[0]].index, 
+#                                                                 rpdf[rpdf['colocal_id'] == coIds[1]]['bbox'].to_list(), rpdf[rpdf['colocal_id'] == coIds[1]].index)
+#     print('starting colocalization')
+#     # colocalization
+#     colocal_instances_df = []
+#     ch_intersecting_label_col = f'ch{coChs[0]}_intersecting_label'
+#     for cl1i, ch1_bbox in zip(ch1_df_indicies, ch1_bboxes):
+        
+#         # extract bbox coords from nuclei image
+#         minx,miny,maxx,maxy = ch1_bbox
+#         ch0_nucleus_img, ch1_nucleus_img = (quant_img[...,i][minx:maxx, miny:maxy] for i in coChs) # ch1_nucleus_img = quant_img[...,coChs[1]][minx:maxx, miny:maxy]
+#         if ch0_nucleus_img.max() <= 0: # if no signal in ch0 skip
+#             continue 
+        
+#         # get intersection percentage if any signal in ch0
+#         intersecting_coords = ch0_nucleus_img[ch1_nucleus_img.nonzero()]
+#         intersection_percent = np.sum(intersecting_coords>0)/intersecting_coords.shape[0]
+        
+        
+#         # check intersection percentage is above threshold
+#         if intersection_percent <= intersection_threshold: continue
+
+
+#         # if some intersecting label get the largest, i.e. get largest non zero label in zif channel
+#         inter_labels, inter_counts = np.unique(ch0_nucleus_img[ch1_nucleus_img.nonzero()], return_counts=True)
+#         nonzero_labels = np.nonzero(inter_labels)[0]
+#         nonzero_counts = inter_counts[np.nonzero(inter_labels)]
+#         largest_count_index = np.argmax(nonzero_counts)
+#         largest_intersecting_label_ch0 = inter_labels[nonzero_labels[largest_count_index]]
+
+
+#         # create a df row for this colocalization instance
+#         colocal4_row = dict(rpdf.loc[cl1i, :])
+#         colocal4_row['colocal_id'] = assign_colocal_id
+#         colocal4_row['intersection_p'] = intersection_percent
+#         colocal4_row[ch_intersecting_label_col] = int(largest_intersecting_label_ch0)
+#         #TODO: add colocal intensity for zif channel here? e.g. rpdf[(rpdf['colocal_id'==coIds[0]) & (rpdf['label']==largest_intersecting_label_ch0)]['intensity_mean'].values[0]
+#         colocal_instances_df.append(colocal4_row)
+            
+
+#     # convert rows to df
+#     colocal_instances_df = pd.DataFrame(colocal_instances_df)
+#     print('ended colocalization')
+#     # add new columns to rpdf, if they don't exist already e.g. if multiple colocalizations are being done
+#     rpdf_colocal = rpdf.copy(deep=True)
+#     if 'intersection_p' not in rpdf_colocal.columns:
+#         rpdf_colocal['intersection_p'] = np.nan
+#     if ch_intersecting_label_col not in rpdf_colocal.columns:
+#         rpdf_colocal[ch_intersecting_label_col] = np.nan
+#     rpdf_final = pd.concat([rpdf_colocal, colocal_instances_df], ignore_index=True)
+    
+#     prt_str+=(f"{rpdf_final.value_counts('colocal_id')}\n")
+#     prt_str+=(f'colocalization complete took {timeit.default_timer() - st_time}\n')
+
+#     if len_init_prt_str==0: # i.e. was called here and not from a func that didn't expect this output
+#         print(prt_str, flush=True)
+#         return rpdf_final
+#     print('returning colocalization')
+#     return rpdf_final, prt_str
+
+# def colocalize(self, colocalization_params, rpdf, quant_img, prt_str=''):
+#     for clc_props in colocalization_params:
+#         coChs, coIds, assign_colocal_id = clc_props['coChs'], clc_props['coIds'], clc_props['assign_colocal_id']
+#         rpdf, prt_str = get_colocalization(self, rpdf, quant_img, intersection_threshold=0.00, 
+#                                             coIds=coIds, coChs=coChs, assign_colocal_id=assign_colocal_id, prt_str=prt_str)
+#     return rpdf, prt_str
+
+
+
 """
 ######################################################################################################
 PROGRAM DESCRIPTION (version: 2024_0121)
@@ -50,18 +140,19 @@ PROGRAM DESCRIPTION (version: 2024_0121)
             - these counts are propogated to all parent regions during compiling
         4) resulting counts per region df is saved
     Timings NEW (max) (TEL15_s023_2-1)
-        - load images 18s
-        - get_region_props 77s
-        - colocalization 0.5s
-        - get_nuclei_counts_by_region 33s (num region polys: 445, 309731/318433 (8702 unassigned))
-            polys took 5.152107999999998
-            load took 5.506371900000005
-            localize took 21.85091699999998
-                separate_polytypes took 0.04850439999998457
-                nb_process_polygons took 21.484798499999982
-                map_df took 0.3176204000000098
-        - TOTAL: 166s
-        - ANIMAL (TEL15, 46 imgs) processPool finished in: 418s
+        - single
+            - load images 18s
+            - get_region_props 77s
+            - colocalization 0.5s
+            - get_nuclei_counts_by_region 33s (num region polys: 445, 309731/318433 (8702 unassigned))
+                polys took 5.152107999999998
+                load took 5.506371900000005
+                localize took 21.85091699999998
+                    separate_polytypes took 0.04850439999998457
+                    nb_process_polygons took 21.484798499999982
+                    map_df took 0.3176204000000098
+            - TOTAL: 166s
+        - ANIMAL (TEL15, 46 imgs) processPool finished in: 407s
     Timings OLD (max)
         - load images 18s
         - get_region_props 75s
@@ -98,137 +189,6 @@ NOTES 05/13
 ######################################################################################################
 """
 
-######################################################################################################
-# tests
-def test_visualize_polygon_overlay(datums):
-    # visualize brain region boundaries overlayed ontop of fullsize image
-    # takes a list of Datum as input and plots the extracted polygons
-    for datum in datums:
-        geojson_path = datum.geojson_regions_dir_paths
-        fs_path = datum.fullsize_paths
-        quant_path = datum.quant_dir_paths
-
-        region_df = rp.load_geometries(geojson_path)
-        fs_img = imread(fs_path)
-        print_array_info(fs_img)
-        
-        # Create figure and axes
-        fig,ax = plt.subplots(1)
-
-        # Display the image
-        disp_img = convert_16bit_image(np.moveaxis(fs_img, 0, -1))
-        ax.imshow(disp_img)
-
-        # Add the patch to the Axes
-        for i in range(len(region_df)):
-            coordinates = region_df.iloc[i,0]
-            polygon = patches.Polygon(coordinates, linewidth=1, edgecolor='r', facecolor='none')
-            ax.add_patch(polygon)
-        plt.show()
-
-
-def test_visualize_predictions():
-    # visualize fullsize image and stardist nuclei detections
-    animals = ac.get_animals('cohort4')
-    an = animals[15]
-    datums = an.get_valid_datums(['fullsize_paths', 'geojson_regions_dir_paths', 'quant_dir_paths'], warn=True)
-    for datum in datums[:2]:
-        fs_img = imread(datum.fullsize_paths)
-        disp_img = convert_16bit_image(np.moveaxis(fs_img, 0, -1))
-        quant_img = imread(datum.quant_dir_paths)
-        
-        print_array_info(fs_img)
-        print_array_info(disp_img)
-        print_array_info(quant_img)
-
-        # Create figure and axes
-        fig,axs = plt.subplots(2,3, figsize=(15,10))
-        for i in range(3):
-            j,k = i%3, i//3
-            axs[k,j].imshow(quant_img[3000:4000, 4000:5000, i], cmap=up.lbl_cmap(), interpolation='nearest')
-            axs[k+1,j].imshow(disp_img[3000:4000, 4000:5000, i])
-        plt.show()
-
-
-######################################################################################################
-# main functions
-# def load_objects(geojson_path):
-#     with open(geojson_path) as f:
-#         allobjects = geojson.load(f)
-#     allfeatures = allobjects['features']
-#     all_objs = [obj for obj in allfeatures if 'measurements' in obj['properties'].keys()]
-#     all_obj_region_ids = [obj['properties']['measurements']['ID'] for obj in all_objs]
-#     all_obj_region_sides = [obj['properties']['classification']['names'][0] for obj in all_objs]
-#     all_exteriors = [geomertry_to_exteriors(obj) for obj in all_objs]
-#     return all_objs
-
-# def load_geometries(geojson_path):
-#     with open(geojson_path) as f:
-#         allobjects = geojson.load(f)
-#     allfeatures = allobjects['features']
-    
-#     # get all objs except the root, which doesn't have an atlas id
-#     all_objs = [obj for obj in allfeatures if 'measurements' in obj['properties'].keys()] # keeping for backwards compat.
-#     all_objs = [obj for obj in all_objs if 'ID' in obj['properties']['measurements']] # NEW 2023_0808 replaced above line
-#     all_obj_region_ids = [obj['properties']['measurements']['ID'] for obj in all_objs]
-#     all_obj_region_sides = [obj['properties']['classification']['names'][0] for obj in all_objs]
-#     all_obj_atlas_coords = extract_atlas_coords(all_objs) # NEW 2023_0808
-    
-#     all_exteriors = [geomertry_to_exteriors(obj) for obj in all_objs]
-#     all_areas = [polygon_area(ext) for ext in all_exteriors]
-#     region_df = get_region_df(all_exteriors, all_obj_region_ids, all_obj_region_sides, all_areas, all_obj_atlas_coords)
-#     return region_df
-
-# def get_region_df(all_exteriors, all_obj_region_ids, all_obj_region_sides, all_areas, all_obj_atlas_coords):
-#     ''' convert the extracted region attributes to a dataframe '''
-#     all_objx, all_objy, all_objz = zip(*all_obj_atlas_coords)
-#     region_var_lens = [len(var) for var in [all_exteriors, all_obj_region_ids, all_obj_region_sides, all_areas, all_objx,all_objy,all_objz]]
-#     assert len(set(region_var_lens)) == 1, f'region variable lens do not match {region_var_lens}'
-
-#     region_df = pd.DataFrame([
-#         {
-#             'region_polygons':all_exteriors[i], 'region_ids':all_obj_region_ids[i], 'region_sides':all_obj_region_sides[i], 'region_areas':all_areas[i],
-#             'atlas_x':all_objx[i], 'atlas_y':all_objy[i], 'atlas_z':all_objz[i]
-#         }
-#         for i in range(len(all_exteriors))])
-#     return region_df
-
-
-# def extract_atlas_coords(objs):
-#     ''' NEW 2023_0808
-#         extracts the atlas coords for each region from geojson file if present
-#     '''
-#     atlas_coords_not_found = 0 # store number of coords not found
-#     atlas_measurements_keys = ['Atlas_X', 'Atlas_Y', 'Atlas_Z']
-#     output = []
-#     for obj in objs:
-#         obj_output = []
-#         measurements = obj['properties']['measurements']
-#         for coord_key in atlas_measurements_keys:
-#             if coord_key not in measurements: # check atlas coords exist
-#                 atlas_coords_not_found += 1
-#                 obj_output.append(None)
-#             else:
-#                 obj_output.append(measurements[coord_key])
-#         output.append(obj_output)
-#     if atlas_coords_not_found > 0: print(f'WARN --> atlas coords not extracted (num: {atlas_coords_not_found})', flush=True)
-#     return output
-
-
-
-
-
-
-
-
-
-
-        
-
-
-
-#############################################################################################################################
-# new code 5/28/23
 def write_csv(fp, df):
     with open(fp, 'wb') as f:
         df.to_csv(f)
@@ -303,87 +263,121 @@ def get_rp_table(disp, quant_img, fullsize_img, channels=3, ch_colocal_id={0:1, 
     return rpdf, prt_str
     
 
+def colocalize(
+        colocalization_params, rpdf, quant_img,
+        prt_str='', intersection_threshold=0.001, intersection_metric=None
+    ):
+    prt_str += f"base_coloc_counts: {rpdf['colocal_id'].value_counts().to_dict()}"
+    for clc_props in colocalization_params:
+        coChs, coIds, assign_colocal_id = clc_props['coChs'], clc_props['coIds'], clc_props['assign_colocal_id']
+        rpdf, prt_str = get_colocalization(rpdf, quant_img, intersection_threshold=intersection_threshold, 
+                                            coIds=coIds, coChs=coChs, assign_colocal_id=assign_colocal_id, 
+                                            prt_str=prt_str, intersection_metric=intersection_metric)
+    return rpdf, prt_str
 
-def get_colocalization(disp, rpdf, quant_img, intersection_threshold=0.00, coIds=(1,2), coChs=(0,1), assign_colocal_id=3, prt_str=''):
-    ''' #TODO bring info about what to colocalize out into dispatcher
-    colocalization method, very fast (<0.2 s)
-    grab bboxes for ch0 and ch1 
-    for each ch1 nuclei get signal in other channels at that location 
-    also gets the label of ch0 nuclei colocal with ch1
-    ARGS
-        - rpdf (pd.Dataframe) --> region props as a dataframe (e.g. by using regionprops_table)
-        - quant_img (np.array[int]) --> label image containing detected nuclei
-        - intersection_threshold (float) --> intersection is valid between nuclei if greater than this percentage (range 0,1)
-        - coIds (tup[int,int]) --> colocal ids in rpdf to perform colocalization, colocal nuclei are constructed from second value
-        - coChs (tup[int,int]) --> channels in quant_img corresponding to coIDs
-        - assign_colocal_id (int) --> colocal id to assign resulting colocalization in rpdf
-    '''
+def calculate_iou(masks):
+    """
+    Calculate the Intersection over Union (IoU) for multiple masks.
 
-    # for testing intersection images
-    # self, intersection_threshold = disps[0], 0.0
-    # rpdf, quant_img = get_region_props(self)
-    # plot_count = 0
+    :param masks: A 3D NumPy array of shape (height, width, n_masks) containing binary masks.
+    :return: IoU value.
+    """
+    intersection = np.logical_and.reduce(masks, axis=2).sum()
+    union = np.logical_or.reduce(masks, axis=2).sum()
+    iou = intersection / union if union != 0 else 0
+    return iou
+
+def get_colocalization(
+        rpdf, quant_img,
+        intersection_threshold=0.00, coIds=(1,2), coChs=(0,1), assign_colocal_id=3, 
+        prt_str='', intersection_metric=None,
+    ):
+    # parse args and setup for efficiency
+    #######################################
+    # support arbitrary functions that take as argument 3 dim array and return a float
+    intersection_metric = calculate_iou if intersection_metric is None else intersection_metric
     st_time, len_init_prt_str = dt(), len(prt_str)
-    # extract bboxes for zif and gfp channels
-    ch0_bboxes, ch0_df_indicies, ch1_bboxes, ch1_df_indicies = (rpdf[rpdf['colocal_id'] == coIds[0]]['bbox'].to_list(), rpdf[rpdf['colocal_id'] == coIds[0]].index, 
-                                                                rpdf[rpdf['colocal_id'] == coIds[1]]['bbox'].to_list(), rpdf[rpdf['colocal_id'] == coIds[1]].index)
-    print('starting colocalization')
-    # colocalization
-    colocal_instances_df = []
-    ch_intersecting_label_col = f'ch{coChs[0]}_intersecting_label'
-    for cl1i, ch1_bbox in zip(ch1_df_indicies, ch1_bboxes):
-        
-        # extract bbox coords from nuclei image
-        minx,miny,maxx,maxy = ch1_bbox
-        ch0_nucleus_img, ch1_nucleus_img = (quant_img[...,i][minx:maxx, miny:maxy] for i in coChs) # ch1_nucleus_img = quant_img[...,coChs[1]][minx:maxx, miny:maxy]
-        if ch0_nucleus_img.max() <= 0: # if no signal in ch0 skip
-            continue 
-        
-        # get intersection percentage if any signal in ch0
-        intersecting_coords = ch0_nucleus_img[ch1_nucleus_img.nonzero()]
-        intersection_percent = np.sum(intersecting_coords>0)/intersecting_coords.shape[0]
-        
-        
-        # check intersection percentage is above threshold
-        if intersection_percent <= intersection_threshold: continue
 
+    # using last provided colocal_id as base for comparison
+    n_clc_channels = len(coIds)
+    base_coId, base_coCh = coIds[-1], coChs[-1]
+    other_coIds, other_coChs = coIds[:-1], coChs[:-1]
+    len_other_coChs = len(other_coChs)
+    iter_other_coChs = np.arange(len_other_coChs)
 
-        # if some intersecting label get the largest, i.e. get largest non zero label in zif channel
-        inter_labels, inter_counts = np.unique(ch0_nucleus_img[ch1_nucleus_img.nonzero()], return_counts=True)
-        nonzero_labels = np.nonzero(inter_labels)[0]
-        nonzero_counts = inter_counts[np.nonzero(inter_labels)]
-        largest_count_index = np.argmax(nonzero_counts)
-        largest_intersecting_label_ch0 = inter_labels[nonzero_labels[largest_count_index]]
-
-
-        # create a df row for this colocalization instance
-        colocal4_row = dict(rpdf.loc[cl1i, :])
-        colocal4_row['colocal_id'] = assign_colocal_id
-        colocal4_row['intersection_p'] = intersection_percent
-        colocal4_row[ch_intersecting_label_col] = int(largest_intersecting_label_ch0)
-        #TODO: add colocal intensity for zif channel here? e.g. rpdf[(rpdf['colocal_id'==coIds[0]) & (rpdf['label']==largest_intersecting_label_ch0)]['intensity_mean'].values[0]
-        colocal_instances_df.append(colocal4_row)
-            
-
-    # convert rows to df
-    colocal_instances_df = pd.DataFrame(colocal_instances_df)
-    print('ended colocalization')
-    # add new columns to rpdf, if they don't exist already e.g. if multiple colocalizations are being done
-    rpdf_colocal = rpdf.copy(deep=True)
-    if 'intersection_p' not in rpdf_colocal.columns:
-        rpdf_colocal['intersection_p'] = np.nan
-    if ch_intersecting_label_col not in rpdf_colocal.columns:
-        rpdf_colocal[ch_intersecting_label_col] = np.nan
-    rpdf_final = pd.concat([rpdf_colocal, colocal_instances_df], ignore_index=True)
+    # extract indicies in rpdf for base colocal id and use these to get other input values
+    ch_df_indicies = rpdf[rpdf['colocal_id'] == base_coId].index.values
+    ch_bboxes = np.array([el for el in rpdf.loc[ch_df_indicies, 'bbox'].values])
+    ch_nuc_lbls = rpdf.loc[ch_df_indicies, 'label'].values
+    assert ch_bboxes.shape[0] == ch_df_indicies.shape[0] == ch_nuc_lbls.shape[0]
     
-    prt_str+=(f"{rpdf_final.value_counts('colocal_id')}\n")
-    prt_str+=(f'colocalization complete took {timeit.default_timer() - st_time}\n')
+    # setup array to store results - cli, intersection_percent, *(largest_label for each other ch)
+    result_default_cols = ['cli', 'intersection_percent']
+    ch_intersecting_label_cols = [f'ch{coCh}_intersecting_label' for coCh in other_coChs]
+    len_result_default_cols = len(result_default_cols) 
+    results_arr = np.full((ch_bboxes.shape[0], len_result_default_cols + len(ch_intersecting_label_cols)), fill_value=-1.0)
 
-    if len_init_prt_str==0: # i.e. was called here and not from a func that didn't expect this output
-        print(prt_str, flush=True)
-        return rpdf_final
-    print('returning colocalization')
-    return rpdf_final, prt_str
+    # colocalization
+    #######################################
+    for row_i in np.arange(ch_bboxes.shape[0]):
+        CONTINUE_FLAG = False
+        cli, ch_bbox, base_nuc_lbl = ch_df_indicies[row_i], ch_bboxes[row_i], ch_nuc_lbls[row_i]
+        minx,miny,maxx,maxy = ch_bbox
+
+        # extract bbox coords from nuclei image
+        ch_nucleus_img_base = quant_img[minx:maxx, miny:maxy, base_coCh] # extract bbox around this label
+        base_non_zero = (ch_nucleus_img_base==base_nuc_lbl).nonzero() # get nonzero coords for current label in base ch (remove other labels in this channel if present)
+
+        # generate a mask for the other colocalization channels from the base channel
+        ch_nucleus_img_others = quant_img[minx:maxx, miny:maxy, other_coChs]
+        others_masked = np.zeros_like(ch_nucleus_img_others)
+        for oCh_i in range(len(other_coChs)):
+            o_masked = ch_nucleus_img_others[base_non_zero[0], base_non_zero[1], oCh_i]
+            if o_masked.max() == 0: 
+                CONTINUE_FLAG = True
+                break
+            inter_labels, inter_counts = np.unique(o_masked.ravel()[o_masked.nonzero()[0]], return_counts=True) # flatten, take non-zero values, count unique
+            largest_intersecting_label = inter_labels[np.argmax(inter_counts)] # take label w highest count
+            others_masked[base_non_zero[0], base_non_zero[1], oCh_i] = np.where(o_masked==largest_intersecting_label, 1, 0)
+            results_arr[row_i, len_result_default_cols+oCh_i] = largest_intersecting_label
+
+        if CONTINUE_FLAG: 
+            continue # if any of the other channels had no label overlapping with base, skip
+
+        # get intersection percentage
+        all_stacked = np.concatenate((others_masked, np.where(ch_nucleus_img_base[:, :, np.newaxis]==base_nuc_lbl, 1, 0)), axis=2)
+        intersection = intersection_metric(all_stacked)
+        if intersection < intersection_threshold:
+            continue
+        # write to results
+        results_arr[row_i, 0:len_result_default_cols] = cli, intersection
+        
+
+    # write results to input dataframe
+    #######################################
+    # convert successful results to dataframe and merge
+    results = results_arr[(results_arr[:, 0]>-1), :]
+    print(results.shape)
+    df_results = pd.DataFrame(results, columns=result_default_cols + ch_intersecting_label_cols).set_index('cli')
+    merge_on_df = rpdf.iloc[df_results.index.values, :]
+
+    # remove the cols we are writing the results to if they already exist
+    override_cols = [c for c in ch_intersecting_label_cols+['intersection_percent'] if c in merge_on_df.columns]
+    coloc_df = (pd.merge(
+        merge_on_df.drop(columns=override_cols), df_results, how='left', left_index=True, right_index=True)
+        .assign(colocal_id = assign_colocal_id, ))
+
+    # make cols if they don't exist in input rpdf
+    for col in coloc_df.columns.to_list():
+        if col not in rpdf:
+            rpdf[col] = np.nan
+    
+    # add to input df
+    rpdf_coloc = pd.concat([rpdf, coloc_df], ignore_index=True)
+    prt_str += f"colocal_id_counts: {rpdf_coloc['colocal_id'].value_counts().to_dict()}\n"
+    prt_str += f"colocalization completed in {dt()-st_time}.\n"
+    return rpdf_coloc, prt_str
+
 
 
 def numba_get_nuclei_counts_by_region(geojson_path, rpdf_coloc, ont, TEST=False, prt_str=''):
@@ -427,12 +421,6 @@ def numba_get_nuclei_counts_by_region(geojson_path, rpdf_coloc, ont, TEST=False,
     if TEST: rpdf_final = rpdf_final.loc[:1000, :]
     return rpdf_final, region_df, prt_str
 
-def colocalize(self, colocalization_params, rpdf, quant_img, prt_str=''):
-    for clc_props in colocalization_params:
-        coChs, coIds, assign_colocal_id = clc_props['coChs'], clc_props['coIds'], clc_props['assign_colocal_id']
-        rpdf, prt_str = get_colocalization(self, rpdf, quant_img, intersection_threshold=0.00, 
-                                            coIds=coIds, coChs=coChs, assign_colocal_id=assign_colocal_id, prt_str=prt_str)
-    return rpdf, prt_str
 
 
 class Dispatcher:
@@ -519,6 +507,11 @@ def get_dispatchers(animals, TEST=False, BACKGROUND_SUBRACTION=False, WRITE_OUTP
 
 
 
+    
+
+
+# TODO need way to interupt terminal
+
 
 if __name__ == '__main__':
     # '''
@@ -529,44 +522,41 @@ if __name__ == '__main__':
     # python "C:\Users\pasca\Box\Reijmers Lab\Pascal\Code\ABBA_PQA\Quantification\img2df.py"
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # '''
-    ###################################################################################################
-    pp_st = time.time()
-    ac = AnimalsContainer()
-    ac.init_animals()
-
-    ###################################################################################################
+    
     # PARAMS
-    # COLOCALID_CH_MAP = {0:1, 1:2, 2:0} # dict mapping channels in intensity image to colocal id (e.g dapi (ch2) is colocal_id 0, zif (ch0) is 1, and GFP (ch1) is 2)
+    ###################################################################################################
     TEST = bool(0) # process centroid subset
     WRITE_OUTPUT = bool(1) # write rpdf and region df to disk
     CLEAN = bool(0) # delete previous counts
-    MULTIPROCESS = bool(0) # use Processpool for parallel processing, else run serially
     BACKGROUND_SUBRACTION = bool(1) # use tophat algorithm to correct for uneven illumination
-    MAX_WORKERS = 12 # num of cores, if running multithreded, for me 12
+    MULTIPROCESS = bool(1) # use Processpool for parallel processing, else run serially
+    MAX_WORKERS = 12 # num of cores if running multithreded, for me 12
     READ_IMG_KWARGS = {'flip_gr_ch':lambda an_id: True if (an_id > 29 and an_id < 50) else False} 
-
-    animals = ac.get_animals(['cohort2', 'cohort3', 'cohort4'])[:1]
-    start_i_disps = 0 # start from this dispatcher, useful if run was interupted 
-    end_i_disps = 1
-    COLOCALID_CH_MAP = ac.ImgDB.get_colocalid_ch_map()
-    COLOCALIZATION_PARAMS = ac.ImgDB.colocalizations
+    GET_ANIMALS = ['cohort2', 'cohort3', 'cohort4']
+    start_i_disps, end_i_disps = 0, 1 #useful if run was interupted 
     
 
-
-    ###################################################################################################
     # MAIN
+    ###################################################################################################
+    # initializations
+    pp_st = time.time()
+    ac = AnimalsContainer()
+    ac.init_animals()
+    animals = ac.get_animals(GET_ANIMALS)[:1]
+    COLOCALID_CH_MAP = ac.ImgDB.get_colocalid_ch_map()
+    COLOCALIZATION_PARAMS = ac.ImgDB.colocalizations
     if CLEAN: ac.clean_animal_dir(animals, 'counts') 
         
     # get dispatchers
     disps = get_dispatchers(
         animals, TEST=TEST, BACKGROUND_SUBRACTION=BACKGROUND_SUBRACTION, WRITE_OUTPUT=WRITE_OUTPUT, 
-        COLOCALID_CH_MAP=COLOCALID_CH_MAP, read_img_kwargs=READ_IMG_KWARGS, colocalization_params=COLOCALIZATION_PARAMS,
+        read_img_kwargs=READ_IMG_KWARGS,
+        COLOCALID_CH_MAP=COLOCALID_CH_MAP,  
+        colocalization_params=COLOCALIZATION_PARAMS,
     ) [start_i_disps:end_i_disps]
     print(f'processing num dispatchers {len(disps)}', flush=True)
     
-    # init numba functions
-    # init_nb_points_in_polygon() 
-
+    # run
     if TEST:
         rpdf_final, region_df = disps[0].run()
         print('test finished in:', time.time() - pp_st, flush=True)

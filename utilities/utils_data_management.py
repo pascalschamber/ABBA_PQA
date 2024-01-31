@@ -4,13 +4,13 @@ import re
 import traceback
 import shutil
 import random
-import json
+import yaml
 from copy import deepcopy
 from .utils_ImgDB import ImgDB
 
 
 class AnimalsContainer:
-    def __init__(self, config_path='./config/animal_data_config.json', quiet=True):
+    def __init__(self, config_path='./config/animal_data_config.yml', quiet=True):
         '''
         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         DESCRIPTION
@@ -62,7 +62,9 @@ class AnimalsContainer:
         # load and set config args
         #################################
         assert os.path.exists(self.config_path), f'config path does not exist {self.config_path}'
-        config_args = json.load(open(self.config_path))
+        with open(self.config_path, 'r') as file:
+            config_args = yaml.safe_load(file)
+            
         # parse AnimalsContainer args
         animal_container_args = deepcopy(config_args.get('AnimalsContainer'))
         assert animal_container_args is not None, 'animal container args not found, ensure config file has key \'AnimalsContainer\'.'

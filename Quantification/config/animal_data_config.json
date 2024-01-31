@@ -59,7 +59,7 @@
             {"name":"Zif", "ch_idx":0, "colocal_id":1}],
         "colocal_nuclei_info": [
             {"name":"GFP+Zif", "ch_idx":[0,1], "co_ids":[1,2], "colocal_id":3},
-            {"name":"GFP+Zif+Dapi", "ch_idx":[2,1], "co_ids":[0,3], "colocal_id":4}
+            {"name":"GFP+Zif+Dapi", "ch_idx":[2, 0, 1], "co_ids":[0, 1, 2], "colocal_id":4}
         ],
         "normalization_params": {
             "cohort2": {"0": {"nmin": 20, "nmax": 99.8}, "1": {"nmin": 20, "nmax": 99.8}, "2": {"nmin": 20, "nmax": 99.8}}, 
@@ -72,21 +72,23 @@
                 "1": {"intensity_mean": [50, null], "area": [50, 1000], "axis_major_length": [7, 85], "axis_minor_length": [7, 31], "eccentricity": [null, 2.9]}, 
                 "2": {"intensity_mean": [20, null], "area": [130, 1000], "axis_major_length": [12, 85], "axis_minor_length": [8, 31], "eccentricity": [null, 2.9]}, 
                 "3": {"intensity_mean": [20, null], "area": [130, 850], "axis_major_length": [12, 85], "axis_minor_length": [8, 31], "eccentricity": [null, 2.9],  
-                        "zif_intensity": [75, null], "intersection_p": [0.33, null]}
+                        "ch0_intensity": [75, null], "intersection_percent": [0.33, null]},
+                "4": {"intensity_mean": [20, null], "area": [130, 850], "axis_major_length": [12, 85], "axis_minor_length": [8, 31], "eccentricity": [null, 2.9],  
+                        "ch0_intensity": [75, null], "ch2_intensity": [89, null], "intersection_percent": [0.33, null]}
             }, 
             "cohort3": {
                 "0": {"intensity_mean": [1, null], "area": [50, 1000], "axis_major_length": [8, 85], "axis_minor_length": [7, 31], "eccentricity": [null, 2.9]}, 
                 "1": {"intensity_mean": [85, null], "area": [50, 1000], "axis_major_length": [7, 85], "axis_minor_length": [7, 31], "eccentricity": [null, 2.9]}, 
                 "2": {"intensity_mean": [45, null], "area": [130, 1000], "axis_major_length": [12, 85], "axis_minor_length": [8, 31], "eccentricity": [null, 2.9]}, 
                 "3": {"intensity_mean": [45, null],  "area": [130, 850], "axis_major_length": [12, 85], "axis_minor_length": [8, 31], "eccentricity": [null, 2.9],
-                        "zif_intensity": [85, null], "intersection_p": [0.33, null]}
+                        "ch0_intensity": [85, null], "intersection_percent": [0.33, null]}
             }, 
             "cohort4": {
                 "0": {"intensity_mean": [1, null], "area": [50, 1000], "axis_major_length": [8, 85], "axis_minor_length": [7, 31], "eccentricity": [null, 2.9]}, 
                 "1": {"intensity_mean": [100, null], "area": [50, 1000], "axis_major_length": [7, 85], "axis_minor_length": [7, 31], "eccentricity": [null, 2.9]}, 
                 "2": {"intensity_mean": [25, null], "area": [130, 1000], "axis_major_length": [12, 85], "axis_minor_length": [8, 31], "eccentricity": [null, 2.9]}, 
                 "3": {"intensity_mean": [25, null], "area": [130, 850], "axis_major_length": [12, 85], "axis_minor_length": [8, 31], "eccentricity": [null, 2.9],  
-                        "zif_intensity": [100, null], "intersection_p": [0.33, null]}
+                        "ch0_intensity": [100, null], "intersection_percent": [0.33, null]}
             }
         }
     }

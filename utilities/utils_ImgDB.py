@@ -6,7 +6,7 @@ class ImgDB:
         self.colocal_nuclei_info = kwargs.get('colocal_nuclei_info')
         self.normalization_params = kwargs.get('normalization_params')
         self.threshold_params = kwargs.get('threshold_params')
-        self.colocalid_ch_map = {}
+        self.colocalid_ch_map = {} # should rename to ch_colocalid_map
         self.colocal_ids = {}
         self.colocalizations = [] # list of dicts: coIds=(1,2), coChs=(0,1), assign_colocal_id=3, {3:{'intersecting_label_column':'ch0_intersecting_label', 'intersecting_colocal_id':1}}
         self.ingest_kwargs()
@@ -22,18 +22,30 @@ class ImgDB:
         # parse colocal nuclei info 
         if self.colocal_nuclei_info is not None:
             for clc_dict in self.colocal_nuclei_info:
+                # get colocal chs and use these to get the colocal_ids
                 coChs = self.check_not_none(clc_dict.get("ch_idx"))
-                # if len(coChs) != 2:
-                #     raise ValueError (f"colocalization must be between 2 channels, got {coChs}")
-                coIds = self.check_not_none(clc_dict.get("co_ids"))
+                if len(coChs) < 2:
+                    raise ValueError (f"colocalization must be between >2 channels, got {coChs}")
+                coIds = [self.get_colocal_id_from_ch_idx(ch) for ch in coChs] #(clc_dict.get("co_ids"))
+                assert len(coChs) == len(coIds)
+                
                 # ensure assigned_colocal_id is unique
                 assign_colocal_id = self.check_not_none(clc_dict.get("colocal_id"))
                 if assign_colocal_id in self.colocal_ids:
                     raise ValueError (f"colocal_id must be unique, got {assign_colocal_id} but have {self.colocal_ids}")
+                
+                # TODO too much redundancy here, perhaps can cut down?
                 self.colocal_ids[assign_colocal_id] = {k:v for k,v in clc_dict.items() if k!="colocal_id"}
-                self.colocalizations.append({'coChs':coChs, 'coIds':coIds, 'assign_colocal_id':assign_colocal_id, 
-                                             'intersecting_label_column':f"ch{coChs[0]}_intersecting_label", "intersecting_colocal_id":coIds[1], 
-                                             "other_intensity_name":f"{self.colocal_ids[coIds[0]]['name']}_intensity"})
+                self.colocalizations.append({
+                    "name":clc_dict["name"], "coChs":coChs, "coIds":coIds, 'assign_colocal_id':assign_colocal_id,
+                    "intersecting_label_columns":[f"ch{ch}_intersecting_label" for ch in coChs[:-1]],
+                    "intersecting_colocal_ids":coIds[:-1],
+                    "base_colocal_id":coIds[-1],
+                    # 'coChs':coChs, 'coIds':coIds, 'assign_colocal_id':assign_colocal_id, 
+                    # #  'intersecting_label_column':f"ch{coChs[0]}_intersecting_label", "intersecting_colocal_id":coIds[1], 
+                    # #  "other_intensity_name":f"{self.colocal_ids[coIds[0]]['name']}_intensity"
+                })
+
         self.sort_colocal_ids()
         self.reformat_json_params('normalization_params')
         self.reformat_json_params('threshold_params')

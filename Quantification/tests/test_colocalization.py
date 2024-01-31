@@ -276,11 +276,11 @@ def calculate_total_overlap(masks):
     Calculate the total overlap of all masks.
 
     :param masks: A 3D NumPy array of shape (height, width, n_masks) containing binary masks.
-    :return: Proportion of total overlap area to the image area.
+    :return: Proportion of total overlap area to the total area of all masks.
     """
     total_overlap = np.logical_and.reduce(masks, axis=2).sum()
-    # total_area = masks.shape[0] * masks.shape[1]
     return total_overlap / np.sum(masks>0)
+
 # ARGS
 #######################################
 clc_props = self.colocalization_params[0]
@@ -290,26 +290,32 @@ coChs, coIds, assign_colocal_id = [0, 1], [1, 2], 3
 intersection_threshold=0.01
 prt_str=''
 
-def colocalize(colocalization_params, rpdf, quant_img, fs_img, prt_str='', intersection_threshold=0.01):
+def colocalize(
+        colocalization_params, rpdf, quant_img, fs_img, 
+        prt_str='', intersection_threshold=0.01, intersection_metric=None
+    ):
     prt_str += f"base_coloc_counts: {rpdf['colocal_id'].value_counts().to_dict()}"
     for clc_props in colocalization_params:
         coChs, coIds, assign_colocal_id = clc_props['coChs'], clc_props['coIds'], clc_props['assign_colocal_id']
         rpdf, prt_str = get_colocalization(rpdf, quant_img, fs_img, intersection_threshold=intersection_threshold, 
-                                            coIds=coIds, coChs=coChs, assign_colocal_id=assign_colocal_id, prt_str=prt_str)
+                                            coIds=coIds, coChs=coChs, assign_colocal_id=assign_colocal_id, 
+                                            prt_str=prt_str, intersection_metric=intersection_metric)
     return rpdf, prt_str
-def get_colocalization(rpdf, quant_img, fs_img, intersection_threshold=0.00, coIds=(1,2), coChs=(0,1), assign_colocal_id=3, prt_str=''):
-    # clc_props = self.colocalization_params[0]
-    # coChs, coIds, assign_colocal_id = clc_props['coChs'], clc_props['coIds'], clc_props['assign_colocal_id']
-    # coChs, coIds, assign_colocal_id = [0, 1], [1, 2], 3
-    # coChs, coIds, assign_colocal_id = [2, 0, 1], [0, 1, 2], 3
-    intersection_threshold=0.01
-    prt_str=''
 
-
-    # func
+def get_colocalization(
+        rpdf, quant_img, fs_img, 
+        intersection_threshold=0.00, coIds=(1,2), coChs=(0,1), assign_colocal_id=3, 
+        prt_str='', intersection_metric=None,
+        # for display/debugging
+        SHOW_FAILED = bool(1), SHOW_SUCCESS = bool(1), UPTO = 25,
+    ):
+    # parse args and setup for efficiency
     #######################################
+    # support arbitrary functions that take as argument 3 dim array and return a float
+    intersection_metric = calculate_iou if intersection_metric is None else intersection_metric
     st_time, len_init_prt_str = dt(), len(prt_str)
-    # extract bboxes for zif and gfp channels, using last provided colocal_id as base for comparison
+
+    # using last provided colocal_id as base for comparison
     n_clc_channels = len(coIds)
     base_coId, base_coCh = coIds[-1], coChs[-1]
     other_coIds, other_coChs = coIds[:-1], coChs[:-1]
@@ -321,19 +327,16 @@ def get_colocalization(rpdf, quant_img, fs_img, intersection_threshold=0.00, coI
     ch_bboxes = np.array([el for el in rpdf.loc[ch_df_indicies, 'bbox'].values])
     ch_nuc_lbls = rpdf.loc[ch_df_indicies, 'label'].values
     assert ch_bboxes.shape[0] == ch_df_indicies.shape[0] == ch_nuc_lbls.shape[0]
-    print('starting colocalization')
-
-    # colocalization
     
-    # result cols = cli, assign_colocal_id, intersection_percent, *(largest_label for each other ch)
+    # setup array to store results - cli, intersection_percent, *(largest_label for each other ch)
     result_default_cols = ['cli', 'intersection_percent']
     ch_intersecting_label_cols = [f'ch{coCh}_intersecting_label' for coCh in other_coChs]
     len_result_default_cols = len(result_default_cols) 
     results_arr = np.full((ch_bboxes.shape[0], len_result_default_cols + len(ch_intersecting_label_cols)), fill_value=-1.0)
 
-    SHOW_FAILED = bool(0)
-    SHOW_SUCCESS = bool(0)
-    for row_i in np.arange(ch_bboxes.shape[0])[:]:
+    # colocalization
+    #######################################
+    for row_i in np.arange(ch_bboxes.shape[0])[:UPTO]:
         CONTINUE_FLAG = False
         cli, ch_bbox, base_nuc_lbl = ch_df_indicies[row_i], ch_bboxes[row_i], ch_nuc_lbls[row_i]
         minx,miny,maxx,maxy = ch_bbox
@@ -345,8 +348,8 @@ def get_colocalization(rpdf, quant_img, fs_img, intersection_threshold=0.00, coI
         ch_nucleus_img_base = quant_img[minx:maxx, miny:maxy, base_coCh] # extract bbox around this label
         base_non_zero = (ch_nucleus_img_base==base_nuc_lbl).nonzero() # get nonzero coords for current label in base ch (remove other labels in this channel if present)
 
+        # generate a mask for the other colocalization channels from the base channel
         ch_nucleus_img_others = quant_img[minx:maxx, miny:maxy, other_coChs]
-        others_non_zero = ch_nucleus_img_others[base_non_zero[0], base_non_zero[1], :]
         others_masked = np.zeros_like(ch_nucleus_img_others)
         for oCh_i in range(len(other_coChs)):
             o_masked = ch_nucleus_img_others[base_non_zero[0], base_non_zero[1], oCh_i]
@@ -364,12 +367,14 @@ def get_colocalization(rpdf, quant_img, fs_img, intersection_threshold=0.00, coI
             others_masked[base_non_zero[0], base_non_zero[1], oCh_i] = np.where(o_masked==largest_intersecting_label, 1, 0)
             results_arr[row_i, len_result_default_cols+oCh_i] = largest_intersecting_label
 
-        if CONTINUE_FLAG: continue # if any of the other channels had no label overlapping with base, skip
+        if CONTINUE_FLAG: 
+            continue # if any of the other channels had no label overlapping with base, skip
 
         # get intersection percentage
         all_stacked = np.concatenate((others_masked, np.where(ch_nucleus_img_base[:, :, np.newaxis]==base_nuc_lbl, 1, 0)), axis=2)
-        iou = calculate_iou(all_stacked)
-        if iou < intersection_threshold:
+        intersection = intersection_metric(all_stacked)
+
+        if intersection < intersection_threshold:
             if SHOW_FAILED:
                 fig,axs = plt.subplots(2,3)
                 up.show_channels(fs_crop, axs=axs.flatten()[:3])
@@ -377,12 +382,9 @@ def get_colocalization(rpdf, quant_img, fs_img, intersection_threshold=0.00, coI
                 fig.suptitle('failed b/c < intersection threshold')
                 plt.show()
             continue
-        results_arr[row_i, 0:len_result_default_cols] = cli, iou
+        results_arr[row_i, 0:len_result_default_cols] = cli, intersection
         
         if SHOW_SUCCESS:
-            # calculate_pairwise_overlap(all_stacked)
-            tot_overlap = calculate_total_overlap(all_stacked)
-
             fig,axs = plt.subplots(4,3, figsize=(9,12))
             axs=axs.flatten()
             up.show_channels(fs_crop, axs=axs[:3])
@@ -392,34 +394,38 @@ def get_colocalization(rpdf, quant_img, fs_img, intersection_threshold=0.00, coI
             [up.show(ch_nucleus_img_others[...,i], def_title=f'{other_coChs[i]} ch_nucleus_img_others', ax=axs[other_ax[i]]) for i in iter_other_coChs]
             [up.show(others_masked[...,i], def_title=f'{other_coChs[i]} others_masked', ax=axs[[10+1, 10-1][i]]) for i in iter_other_coChs]
             axs[10].imshow(np.logical_and.reduce(all_stacked, axis=2), cmap='gray')
-            vals = [round(v,2) for v in [iou, tot_overlap]]
+            vals = [round(v,2) for v in [intersection, calculate_total_overlap(all_stacked)]]
             axs[10].set_title(f"iou:{vals[0]}, ovr:{vals[1]}")
             plt.show()
 
-
+    # write results to input dataframe
+    #######################################
     # convert successful results to dataframe and merge
     results = results_arr[(results_arr[:, 0]>-1), :]
     print(results.shape)
     df_results = pd.DataFrame(results, columns=result_default_cols + ch_intersecting_label_cols).set_index('cli')
     merge_on_df = rpdf.iloc[df_results.index.values, :]
+
+    # remove the cols we are writing the results to if they already exist
     override_cols = [c for c in ch_intersecting_label_cols+['intersection_percent'] if c in merge_on_df.columns]
     coloc_df = (pd.merge(
         merge_on_df.drop(columns=override_cols), df_results, how='left', left_index=True, right_index=True)
         .assign(colocal_id = assign_colocal_id, ))
+
+    # make cols if they don't exist in input rpdf
     for col in coloc_df.columns.to_list():
         if col not in rpdf:
             rpdf[col] = np.nan
+    
+    # add to input df
     rpdf_coloc = pd.concat([rpdf, coloc_df], ignore_index=True)
     prt_str += f"colocal_id_counts: {rpdf_coloc['colocal_id'].value_counts().to_dict()}"
     return rpdf_coloc, prt_str
 
 t0=dt()
-self.colocalization_params.append({'coChs': [2, 0, 1],
-  'coIds': [0, 1, 2],
-  'assign_colocal_id': 5,
-  'intersecting_label_column': 'ch0_intersecting_label',
-  'intersecting_colocal_id': 2,
-  'other_intensity_name': 'Zif_intensity'})
-rpdf_colocal, self.prt_str = colocalize(self.colocalization_params, rpdf, quant_img, fs_img, prt_str=self.prt_str, intersection_threshold=0.01)
+rpdf_colocal, self.prt_str = colocalize(
+    self.colocalization_params, rpdf, quant_img, fs_img, 
+    prt_str=self.prt_str, intersection_threshold=0.01
+)
 print(f"finished in {dt()-t0}.")
 print(self.prt_str)

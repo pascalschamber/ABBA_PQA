@@ -67,7 +67,8 @@ def show_channels(img, chs=[0,1,2], clip_max=None, draw_box=None, show_lbl_is_on
 
 def plot_colocalization(rpdf_view, centroid_i=63222, nuc_view_pad=500):
     rpdf_view = rpdf_view.loc[centroid_i, :].to_dict()
-    show_lbl_is = [int(rpdf_view[col]) for col in ['ch0_intersecting_label', 'label', 'ch2_intersecting_label']]
+    possible_cols = ['ch0_intersecting_label', 'label', 'ch2_intersecting_label']
+    show_lbl_is = [int(rpdf_view[col]) for col in possible_cols if ((col in rpdf_view) and (not pd.isnull(rpdf_view[col])))]
 
     img_bbox = ast.literal_eval(rpdf_view['bbox'])
     view_bbox = np.array(img_bbox) + np.array([-nuc_view_pad, -nuc_view_pad, nuc_view_pad, nuc_view_pad])
@@ -92,8 +93,7 @@ region_df = pd.read_csv(datum.region_df_paths)
 
 
 read_img_kwargs = {'flip_gr_ch':lambda an_id: True if (an_id > 29 and an_id < 50) else False} 
-an_id = an.animal_id_to_int(an.animal_id)
-d_read_img_kwargs = {k:v if not callable(v) else v(an_id) for k,v in read_img_kwargs.items()} if read_img_kwargs else {}
+d_read_img_kwargs = {k:v if not callable(v) else v(an.animal_id_to_int(an.animal_id)) for k,v in read_img_kwargs.items()} if read_img_kwargs else {}
 fs_img = uip.read_img(datum.fullsize_paths, **d_read_img_kwargs)
 nuc_img = imread(datum.quant_dir_paths)
 
@@ -104,10 +104,10 @@ if bool(0):
         );plt.show()
     plt.imshow(nuc_img[...,0], cmap=up.lbl_cmap(), interpolation='nearest');plt.show()
 
-clc_id=4
+clc_id=3
 rpdf_clc = rpdf[rpdf['colocal_id']==clc_id]
 valid_centroid_is = rpdf_clc['centroid_i'].values
 print(f"num valid_centroid_is: {len(valid_centroid_is)}")
-for ci in range(5): 
+for ci in range(15): 
     plot_colocalization(rpdf_clc, centroid_i=valid_centroid_is[ci], nuc_view_pad=100)
 

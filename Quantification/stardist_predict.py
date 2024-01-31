@@ -300,11 +300,6 @@ if __name__ == '__main__':
     """
     # PARAMS
     ##############################################################################################################
-    # NORM_DICT = {
-    #     'cohort2':{0:{'nmin':20, 'nmax':99.8}, 1:{'nmin':20, 'nmax':99.8}, 2:{'nmin':20, 'nmax':99.8}},
-    #     'cohort3':{0:{'nmin':30, 'nmax':99.8}, 1:{'nmin':30, 'nmax':99.8}, 2:{'nmin':20, 'nmax':99.8}},
-    #     'cohort4':{0:{'nmin':30, 'nmax':99.8}, 1:{'nmin':30, 'nmax':99.8}, 2:{'nmin':20, 'nmax':99.8}},
-    # }
     CLEAN = bool(0)
     MULTIPROCESS = bool(0) 
     SKIP_ALREADY_COMPLETED = bool(0) 
@@ -312,30 +307,26 @@ if __name__ == '__main__':
     READ_IMG_KWARGS = {'flip_gr_ch':lambda an_id: True if (an_id > 29 and an_id < 50) else False} 
     IMG_INTENSITY_OUTPATH = os.path.join(r'D:\ReijmersLab\TEL\slides\quant_data\fs_img_intensities', 
                                    '2024_0123_fs-image-intensities_all-cohorts.json')
+    GET_ANIMALS = ['cohort2', 'cohort3', 'cohort4']
     disp_start_i = None
     disp_end_i = 1
-    animals_to_get = ['cohort2','cohort3','cohort4']
-
-
-
+    
     # initializations
     ##############################################################################################################
     tRun = time.time()
     model = StarDist2D.from_pretrained('2D_versatile_fluo') # load model
     ac = AnimalsContainer()
     ac.init_animals(failOnError=False)
-    animals = ac.get_animals(animals_to_get)
+    animals = ac.get_animals(GET_ANIMALS)[:1]
     NORM_DICT = ac.ImgDB.get_normalization_params()
 
     # init dispatchers
     disps = get_dispatchers(
         animals, 
-        norm_dict=NORM_DICT, 
-        read_img_kwargs=READ_IMG_KWARGS,
+        norm_dict=NORM_DICT, read_img_kwargs=READ_IMG_KWARGS, 
         intensity_info_path=IMG_INTENSITY_OUTPATH,
-        pred_n_tiles=PRED_N_TILES,
-        CLEAN=CLEAN, 
-        SKIP_ALREADY_COMPLETED=SKIP_ALREADY_COMPLETED,
+        pred_n_tiles=PRED_N_TILES, 
+        CLEAN=CLEAN, SKIP_ALREADY_COMPLETED=SKIP_ALREADY_COMPLETED,
     ) [disp_start_i:disp_end_i]
 
     print(f"processing num disps: {len(disps)}", flush=True)
