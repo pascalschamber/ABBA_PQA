@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import math
 from typing import Tuple
 import matplotlib
+from matplotlib.colors import LinearSegmentedColormap
 
 from . import utils_image_processing as u2
 
@@ -192,3 +193,45 @@ def show(img, ax=None, cmap=None, alpha=1.0, interpolation=None, def_title=None,
     ax.set_title(str(def_title))
     if not ax_flag: plt.show()
     else: return ax
+
+
+def create_composite_image_with_colormaps(image, colormaps):
+    """
+    Creates a composite image from a 4-channel image using specified colormaps for each channel.
+    
+    Parameters:
+    image (numpy.ndarray): Input image of shape (512, 512, 4).
+    colormaps (list): A list of colormaps or color lists for each channel.
+    
+    Returns:
+    numpy.ndarray: Composite image of shape (512, 512, 3).
+    """
+    
+    
+    # Initialize the composite image
+    composite_image = np.zeros((image.shape[0], image.shape[1], 3))
+    
+    for i in range(image.shape[-1]):
+        # Generate the colormap from the provided colors
+        color_map = colormaps[i]
+        if isinstance(color_map, list):
+            assert len(color_map) == 2
+            cmap = LinearSegmentedColormap.from_list(f"custom_cmap_{i}", color_map)
+        elif isinstance(color_map, str):
+            cmap = LinearSegmentedColormap.from_list(f"custom_cmap_{i}", ['black', color_map])
+        else: 
+            raise ValueError(cmap)
+        # normalize each channel
+        # Ensure the image is normalized to the range [0, 1]
+        image_normalized = image[:,:,i] / image[:,:,i].max()
+        # Apply the colormap
+        colored_channel = cmap(image_normalized)
+        
+        # Extract RGB components (ignore alpha channel if present)
+        for j in range(3):  # RGB channels
+            composite_image[:, :, j] += colored_channel[:, :, j]
+    
+    # Clip values to keep them within the [0, 1] range
+    composite_image = np.clip(composite_image, 0, 1)
+    
+    return composite_image

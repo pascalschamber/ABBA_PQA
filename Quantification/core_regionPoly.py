@@ -223,7 +223,7 @@ class regionPoly:
         self.count_polytypes = None # used for debugging
         self.obj_i = obj_i # this is index of polygon collection in geojson file (i.e. poly_index)
         self.st_level = st_level
-        self.total_area = None
+        self.region_area = None
         self.region_extent = None # store bounding box coordinates
         self.poly_count = 0
         self.poly_arrays = {} # store polys here
@@ -241,7 +241,14 @@ class regionPoly:
         self.acronym = str(obj_names[1])
         self.geometry_type = anobj['geometry']['type']
 
-
+    def __str__(self):
+        prt_str = ''
+        get_attrs = ['obj_id', 'acronym', 'reg_side', '', 'region_name',  '', 'geometry_type','', 'region_area']
+        for attr in get_attrs:
+            if len(attr) == 0: prt_str+='\n'
+            else: prt_str += f"{attr}: {getattr(self, attr)} "
+        return prt_str+'\n'
+    
     def add_poly(self, poly_arr, polyType):
         if polyType not in self.valid_polytypes: 
             raise ValueError(f'polyType ({polyType}) must be one of {self.valid_polytypes}')
